@@ -3,23 +3,36 @@
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 
-  --color-brand-50: #f0f8f4;
-  --color-brand-100: #d9efe3;
-  --color-brand-200: #b4dfc9;
-  --color-brand-300: #84c8a8;
-  --color-brand-400: #52ab84;
-  --color-brand-500: #2f8f68;
-  --color-brand-600: #217353;
-  --color-brand-700: #1c5c44;
-  --color-brand-800: #194a38;
-  --color-brand-900: #143d2f;
-  --color-brand-950: #0b2219;
+  /* Identidade da marca: verde das folhas (primária) e laranja da raposa (destaque) */
+  --color-brand-50: #f5f7ee;
+  --color-brand-100: #e8eed6;
+  --color-brand-200: #d3ddb0;
+  --color-brand-300: #b7c786;
+  --color-brand-400: #9bb062;
+  --color-brand-500: #7f9644;
+  --color-brand-600: #667b35;
+  --color-brand-700: #4f602b;
+  --color-brand-800: #404d26;
+  --color-brand-900: #363f23;
+  --color-brand-950: #1c2310;
+
+  --color-accent-50: #fdf3ea;
+  --color-accent-100: #fbe3cf;
+  --color-accent-200: #f6c7a0;
+  --color-accent-300: #f0a66d;
+  --color-accent-400: #ea8d4a;
+  --color-accent-500: #e8803f;
+  --color-accent-600: #cf6a2a;
+  --color-accent-700: #a85321;
+
+  /* cinza do fundo da logo: a logo se funde com a barra lateral e a tela de login */
+  --color-sidebar: #e0e0e0;
 
   --color-surface: #ffffff;
-  --color-canvas: #f5f7f6;
-  --color-line: #e3e8e5;
-  --color-ink: #17211c;
-  --color-muted: #66756d;
+  --color-canvas: #f6f5f2;
+  --color-line: #e4e1db;
+  --color-ink: #26231f;
+  --color-muted: #6f6c66;
 }
 
 @layer base {

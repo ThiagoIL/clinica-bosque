@@ -5,14 +5,15 @@ export const metadata = { title: "Entrar" };
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { next } = await searchParams;
   return (
-    <main className="grid min-h-screen place-items-center bg-brand-950 px-4">
+    <main className="grid min-h-screen place-items-center bg-sidebar px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-6 text-center text-white">
-          <span className="mx-auto mb-3 grid size-12 place-items-center rounded-xl bg-brand-500 text-2xl font-bold">B</span>
-          <h1 className="text-2xl">Clínica Bosque</h1>
-          <p className="mt-1 text-sm text-brand-200/80">Acesse o sistema de gestão</p>
+        <div className="mb-4 text-center">
+          {/* o fundo da logo é o mesmo cinza da página, então ela aparece sem moldura */}
+          <img src="/logo.jpg" alt="Clínica Bosque" width={176} height={176} className="mx-auto size-44" />
+          <h1 className="-mt-2 text-2xl">Clínica Bosque</h1>
+          <p className="mt-1 text-sm text-muted">Acesse o sistema de gestão</p>
         </div>
-        <div className="card p-6">
+        <div className="card p-6 shadow-sm">
           <LoginForm next={next} />
         </div>
       </div>

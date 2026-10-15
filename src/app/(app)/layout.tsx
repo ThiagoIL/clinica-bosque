@@ -11,10 +11,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0 leading-tight">
             <p className="truncate text-sm font-medium">{user.name}</p>
-            <p className="truncate text-xs text-brand-200/70">{user.email}</p>
+            <p className="truncate text-xs text-muted">{user.email}</p>
           </div>
           <form action={logout}>
-            <button type="submit" className="rounded-lg p-2 text-brand-100/80 hover:bg-white/10 hover:text-white" aria-label="Sair" title="Sair">
+            <button type="submit" className="rounded-lg p-2 text-muted hover:bg-black/5 hover:text-ink" aria-label="Sair" title="Sair">
               <LogOut className="size-4" />
             </button>
           </form>

@@ -30,5 +30,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/health).*)"],
+  // Arquivos estáticos (logo, ícones) precisam carregar na tela de login, antes da sessão.
+  matcher: ["/((?!_next/static|_next/image|api/health|.*\\.(?:jpg|jpeg|png|svg|ico|webp)$).*)"],
 };

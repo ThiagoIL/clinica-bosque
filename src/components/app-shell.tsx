@@ -60,7 +60,7 @@ export function AppShell({ children, footer }: { children: ReactNode; footer: Re
       {NAV.map((group, i) => (
         <div key={i}>
           {group.title && (
-            <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-brand-300/70">
+            <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted">
               {group.title}
             </p>
           )}
@@ -73,11 +73,11 @@ export function AppShell({ children, footer }: { children: ReactNode; footer: Re
                   className={clsx(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                     isActive(href)
-                      ? "bg-white/12 font-medium text-white"
-                      : "text-brand-100/80 hover:bg-white/8 hover:text-white",
+                      ? "bg-white font-medium text-brand-800 shadow-xs ring-1 ring-black/5"
+                      : "text-ink/75 hover:bg-black/5 hover:text-ink",
                   )}
                 >
-                  <Icon className="size-4 shrink-0" />
+                  <Icon className={clsx("size-4 shrink-0", isActive(href) && "text-accent-600")} />
                   {label}
                 </Link>
               </li>
@@ -89,16 +89,17 @@ export function AppShell({ children, footer }: { children: ReactNode; footer: Re
   );
 
   const sidebar = (
-    <div className="flex h-full flex-col bg-brand-900 text-white">
-      <div className="flex items-center gap-2.5 border-b border-white/10 px-5 py-5">
-        <span className="grid size-9 place-items-center rounded-lg bg-brand-500 text-lg font-bold">B</span>
+    <div className="flex h-full flex-col bg-sidebar text-ink">
+      <div className="flex items-center gap-3 border-b border-black/10 px-4 py-3">
+        {/* a logo tem o mesmo cinza do fundo da barra lateral e se funde com ela */}
+        <img src="/logo.jpg" alt="Clínica Bosque" width={64} height={64} className="size-16 shrink-0" />
         <div className="leading-tight">
           <p className="font-semibold">Clínica Bosque</p>
-          <p className="text-xs text-brand-200/70">Gestão da clínica</p>
+          <p className="text-xs text-muted">Gestão da clínica</p>
         </div>
       </div>
       {nav}
-      <div className="border-t border-white/10 p-4">{footer}</div>
+      <div className="border-t border-black/10 p-4">{footer}</div>
     </div>
   );
 
@@ -110,7 +111,10 @@ export function AppShell({ children, footer }: { children: ReactNode; footer: Re
         <button onClick={() => setOpen(true)} className="btn btn-ghost -ml-2 p-2" aria-label="Abrir menu">
           <Menu className="size-5" />
         </button>
-        <span className="font-semibold">Clínica Bosque</span>
+        <span className="flex items-center gap-2 font-semibold">
+          <img src="/logo.jpg" alt="" width={32} height={32} className="size-8 rounded-full" />
+          Clínica Bosque
+        </span>
         <span className="w-9" />
       </div>
 
@@ -120,7 +124,7 @@ export function AppShell({ children, footer }: { children: ReactNode; footer: Re
           <div className="absolute inset-y-0 left-0 w-72 shadow-xl">
             <button
               onClick={() => setOpen(false)}
-              className="absolute right-3 top-4 z-10 rounded p-1 text-white/80 hover:text-white"
+              className="absolute right-3 top-4 z-10 rounded p-1 text-muted hover:text-ink"
               aria-label="Fechar menu"
             >
               <X className="size-5" />
