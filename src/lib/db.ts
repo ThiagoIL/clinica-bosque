@@ -9,6 +9,21 @@ function createClient() {
   return new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 }
 
-export const db = globalForPrisma.prisma ?? createClient();
+function getClient(): PrismaClient {
+  const client = globalForPrisma.prisma ?? createClient();
+  // Reaproveita a instância em dev (hot reload) e em produção (processo único).
+  globalForPrisma.prisma = client;
+  return client;
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
+/**
+ * Cliente do banco criado sob demanda: importar este módulo não exige DATABASE_URL,
+ * o que permite `next build` (coleta de dados das rotas) sem acesso ao banco.
+ */
+export const db: PrismaClient = new Proxy({} as PrismaClient, {
+  get(_, prop) {
+    const client = getClient();
+    const value = Reflect.get(client, prop, client);
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+});
