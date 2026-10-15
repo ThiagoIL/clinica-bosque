@@ -1,0 +1,94 @@
+import Link from "next/link";
+import { db } from "@/lib/db";
+import { formatPhone } from "@/lib/cpf";
+import { ActionForm, CheckboxField, FormActions, FormGrid, MaskedField, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
+import { Badge, Card, EmptyState, LinkButton, PageHeader, param } from "@/components/ui/primitives";
+import { saveProfessional } from "./actions";
+
+export const metadata = { title: "Profissionais" };
+
+export default async function ProfessionalsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const editId = param(sp.edit);
+  const showForm = editId !== undefined;
+
+  const [professionals, editing] = await Promise.all([
+    db.professional.findMany({ orderBy: [{ active: "desc" }, { name: "asc" }] }),
+    editId && editId !== "new" ? db.professional.findUnique({ where: { id: editId } }) : null,
+  ]);
+
+  return (
+    <>
+      <PageHeader
+        title="Profissionais"
+        description="Médicos, terapeutas e demais profissionais que atendem na clínica."
+        actions={!showForm && <LinkButton href="/profissionais?edit=new">Novo profissional</LinkButton>}
+      />
+
+      {showForm && (
+        <Card title={editing ? `Editar ${editing.name}` : "Novo profissional"} className="mb-6">
+          <ActionForm action={saveProfessional}>
+            {editing && <input type="hidden" name="id" value={editing.id} />}
+            <FormGrid>
+              <TextField name="name" label="Nome" required span={2} defaultValue={editing?.name} />
+              <TextField name="specialty" label="Especialidade" defaultValue={editing?.specialty} />
+              <TextField name="registryType" label="Conselho (CRM, CRP…)" defaultValue={editing?.registryType} />
+              <TextField name="registryNumber" label="Nº do registro" defaultValue={editing?.registryNumber} />
+              <MaskedField name="cpf" label="CPF" mask="cpf" defaultValue={editing?.cpf} />
+              <MaskedField name="phone" label="Telefone" mask="phone" defaultValue={editing?.phone} />
+              <TextField name="email" label="E-mail" type="email" defaultValue={editing?.email} />
+              <div>
+                <label htmlFor="color" className="label">Cor na agenda</label>
+                <input
+                  id="color" name="color" type="color" defaultValue={editing?.color ?? "#2f8f68"}
+                  className="h-9.5 w-full cursor-pointer rounded-lg border border-line bg-surface p-1"
+                />
+              </div>
+              <TextareaField name="notes" label="Observações" span={3} defaultValue={editing?.notes} />
+              <CheckboxField name="active" label="Profissional ativo" defaultChecked={editing?.active ?? true} />
+            </FormGrid>
+            <FormActions>
+              <SubmitButton>Salvar</SubmitButton>
+              <LinkButton href="/profissionais" variant="outline">Cancelar</LinkButton>
+            </FormActions>
+          </ActionForm>
+        </Card>
+      )}
+
+      {professionals.length === 0 ? (
+        <EmptyState title="Nenhum profissional cadastrado" description="Cadastre os profissionais para poder agendar atendimentos." />
+      ) : (
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr><th>Nome</th><th>Especialidade</th><th>Registro</th><th>Telefone</th><th>Situação</th><th /></tr>
+            </thead>
+            <tbody>
+              {professionals.map((p) => (
+                <tr key={p.id}>
+                  <td>
+                    <span className="inline-flex items-center gap-2 font-medium">
+                      <span className="size-3 rounded-full" style={{ background: p.color }} />
+                      {p.name}
+                    </span>
+                  </td>
+                  <td>{p.specialty ?? "—"}</td>
+                  <td>{[p.registryType, p.registryNumber].filter(Boolean).join(" ") || "—"}</td>
+                  <td>{formatPhone(p.phone) || "—"}</td>
+                  <td>{p.active ? <Badge tone="green">Ativo</Badge> : <Badge>Inativo</Badge>}</td>
+                  <td className="text-right">
+                    <Link href={`/profissionais?edit=${p.id}`} className="text-sm text-brand-700 hover:underline">Editar</Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}

@@ -1,0 +1,40 @@
+# Ambiente local. Em produção (Easypanel) o Postgres é um serviço do próprio painel.
+#
+#   docker compose up -d db          # só o banco (desenvolvimento com `npm run dev`)
+#   docker compose --profile app up  # banco + app em container (teste da imagem de produção)
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: bosque
+    ports:
+      - "5432:5432"
+    volumes:
+      - bosque-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d bosque"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    profiles: ["app"]
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/bosque
+      AUTH_SECRET: ${AUTH_SECRET:-troque-por-um-valor-aleatorio-com-pelo-menos-32-caracteres}
+      ADMIN_NAME: ${ADMIN_NAME:-Administrador}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@bosque.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-troque-esta-senha}
+    ports:
+      - "3000:3000"
+
+volumes:
+  bosque-db:

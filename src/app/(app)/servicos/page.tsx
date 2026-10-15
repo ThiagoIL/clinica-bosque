@@ -1,0 +1,86 @@
+import Link from "next/link";
+import { db } from "@/lib/db";
+import { formatMoney, centsToInput } from "@/lib/money";
+import { optionsOf, serviceKindLabels } from "@/lib/labels";
+import { ActionForm, CheckboxField, FormActions, FormGrid, SelectField, SubmitButton, TextField } from "@/components/ui/form-kit";
+import { Badge, Card, EmptyState, LinkButton, PageHeader, param } from "@/components/ui/primitives";
+import { saveService } from "./actions";
+
+export const metadata = { title: "Serviços" };
+
+export default async function ServicesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
+  const editId = param(sp.edit);
+  const [services, editing] = await Promise.all([
+    db.service.findMany({ orderBy: [{ active: "desc" }, { name: "asc" }] }),
+    editId && editId !== "new" ? db.service.findUnique({ where: { id: editId } }) : null,
+  ]);
+
+  return (
+    <>
+      <PageHeader
+        title="Serviços"
+        description="Catálogo de consultas, sessões e terapias com valor e duração padrão."
+        actions={editId === undefined && <LinkButton href="/servicos?edit=new">Novo serviço</LinkButton>}
+      />
+
+      {editId !== undefined && (
+        <Card title={editing ? `Editar ${editing.name}` : "Novo serviço"} className="mb-6">
+          <ActionForm action={saveService}>
+            {editing && <input type="hidden" name="id" value={editing.id} />}
+            <FormGrid cols={4}>
+              <TextField name="name" label="Nome" required span={2} defaultValue={editing?.name} />
+              <SelectField
+                name="kind" label="Tipo" required allowEmpty={false}
+                options={optionsOf(serviceKindLabels)} defaultValue={editing?.kind ?? "SESSION"}
+              />
+              <TextField
+                name="defaultPrice" label="Valor padrão (R$)" required inputMode="decimal"
+                defaultValue={centsToInput(editing?.defaultPriceCents ?? 0)}
+              />
+              <TextField
+                name="durationMinutes" label="Duração (min)" required type="number" min={5} max={600}
+                defaultValue={editing?.durationMinutes ?? 50}
+              />
+              <CheckboxField name="active" label="Serviço ativo" defaultChecked={editing?.active ?? true} />
+            </FormGrid>
+            <FormActions>
+              <SubmitButton>Salvar</SubmitButton>
+              <LinkButton href="/servicos" variant="outline">Cancelar</LinkButton>
+            </FormActions>
+          </ActionForm>
+        </Card>
+      )}
+
+      {services.length === 0 ? (
+        <EmptyState title="Nenhum serviço cadastrado" description="Cadastre ao menos um serviço para lançar atendimentos." />
+      ) : (
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr><th>Nome</th><th>Tipo</th><th>Valor padrão</th><th>Duração</th><th>Situação</th><th /></tr>
+            </thead>
+            <tbody>
+              {services.map((s) => (
+                <tr key={s.id}>
+                  <td className="font-medium">{s.name}</td>
+                  <td>{serviceKindLabels[s.kind]}</td>
+                  <td className="tabular-nums">{formatMoney(s.defaultPriceCents)}</td>
+                  <td>{s.durationMinutes} min</td>
+                  <td>{s.active ? <Badge tone="green">Ativo</Badge> : <Badge>Inativo</Badge>}</td>
+                  <td className="text-right">
+                    <Link href={`/servicos?edit=${s.id}`} className="text-sm text-brand-700 hover:underline">Editar</Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}

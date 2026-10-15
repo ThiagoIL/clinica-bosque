@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  --color-brand-50: #f0f8f4;
+  --color-brand-100: #d9efe3;
+  --color-brand-200: #b4dfc9;
+  --color-brand-300: #84c8a8;
+  --color-brand-400: #52ab84;
+  --color-brand-500: #2f8f68;
+  --color-brand-600: #217353;
+  --color-brand-700: #1c5c44;
+  --color-brand-800: #194a38;
+  --color-brand-900: #143d2f;
+  --color-brand-950: #0b2219;
+
+  --color-surface: #ffffff;
+  --color-canvas: #f5f7f6;
+  --color-line: #e3e8e5;
+  --color-ink: #17211c;
+  --color-muted: #66756d;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  body {
+    @apply bg-canvas text-ink antialiased;
+  }
+  h1, h2, h3 {
+    @apply font-semibold tracking-tight;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-500;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-transparent px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn-primary {
+    @apply bg-brand-600 text-white hover:bg-brand-700;
+  }
+  .btn-outline {
+    @apply border-line bg-surface text-ink hover:bg-brand-50;
+  }
+  .btn-danger {
+    @apply border-red-200 bg-red-50 text-red-700 hover:bg-red-100;
+  }
+  .btn-ghost {
+    @apply text-muted hover:bg-brand-50 hover:text-ink;
+  }
+  .btn-sm {
+    @apply px-2.5 py-1.5 text-xs;
+  }
+
+  .input {
+    @apply block w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink shadow-xs placeholder:text-muted/70 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 disabled:bg-canvas;
+  }
+  .input[aria-invalid="true"] {
+    @apply border-red-400 focus:border-red-500 focus:ring-red-100;
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium text-muted;
+  }
+
+  .card {
+    @apply rounded-xl border border-line bg-surface shadow-xs;
+  }
+
+  .table-wrap {
+    @apply overflow-x-auto rounded-xl border border-line bg-surface;
+  }
+  .table {
+    @apply w-full text-left text-sm;
+  }
+  .table thead {
+    @apply border-b border-line bg-canvas text-xs uppercase tracking-wide text-muted;
+  }
+  .table th {
+    @apply px-4 py-2.5 font-medium whitespace-nowrap;
+  }
+  .table td {
+    @apply px-4 py-3 align-middle;
+  }
+  .table tbody tr {
+    @apply border-b border-line last:border-0;
+  }
+  .table tbody tr:hover {
+    @apply bg-brand-50/50;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+}

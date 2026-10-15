@@ -1,0 +1,411 @@
+// Clínica Bosque — modelo de dados
+// Valores monetários são armazenados em centavos (Int).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────── Enums ─────────────────────────
+
+enum UserRole {
+  ADMIN
+  STAFF
+}
+
+enum Sex {
+  FEMALE
+  MALE
+  OTHER
+}
+
+enum ServiceKind {
+  CONSULTATION
+  SESSION
+  THERAPY
+  EXAM
+  OTHER
+}
+
+enum Recurrence {
+  NONE
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+enum BillingMode {
+  PER_SESSION
+  SINGLE
+  INSTALLMENTS
+}
+
+enum EngagementStatus {
+  ACTIVE
+  COMPLETED
+  CANCELED
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELED
+  NO_SHOW
+}
+
+enum EntryKind {
+  INCOME
+  EXPENSE
+}
+
+enum EntryStatus {
+  PENDING
+  PAID
+  CANCELED
+}
+
+enum PaymentMethod {
+  CASH
+  PIX
+  DEBIT_CARD
+  CREDIT_CARD
+  BANK_SLIP
+  TRANSFER
+  HEALTH_INSURANCE
+  OTHER
+}
+
+enum AccountType {
+  CASH
+  BANK
+  OTHER
+}
+
+enum StockMovementType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+// ───────────────────────── Acesso ─────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(ADMIN)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  notes PatientNote[]
+}
+
+// ───────────────────────── Pacientes ─────────────────────────
+
+model Patient {
+  id String @id @default(cuid())
+
+  // Dados do paciente
+  name          String
+  socialName    String?
+  cpf           String?   @unique
+  rg            String?
+  birthDate     DateTime? @db.Date
+  sex           Sex?
+  maritalStatus String?
+  occupation    String?
+  phone         String?
+  phone2        String?
+  email         String?
+  zipCode       String?
+  street        String?
+  number        String?
+  complement    String?
+  neighborhood  String?
+  city          String?
+  state         String?
+
+  // Familiar / responsável
+  guardianName                String?
+  guardianRelationship        String?
+  guardianCpf                 String?
+  guardianPhone               String?
+  guardianEmail               String?
+  emergencyContactName        String?
+  emergencyContactRelationship String?
+  emergencyContactPhone       String?
+
+  // Dados de saúde
+  healthInsurance       String?
+  healthInsuranceNumber String?
+  bloodType             String?
+  allergies             String?
+  medications           String?
+  chronicConditions     String?
+  surgeries             String?
+  diagnosis             String?
+  healthNotes           String?
+
+  // Dados financeiros
+  billingName            String?
+  billingCpf             String?
+  billingEmail           String?
+  billingPhone           String?
+  preferredPaymentMethod PaymentMethod?
+  defaultDueDay          Int?
+  financialNotes         String?
+
+  // Observações
+  observations String?
+
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  notes        PatientNote[]
+  engagements  Engagement[]
+  appointments Appointment[]
+  entries      FinancialEntry[]
+
+  @@index([name])
+}
+
+model PatientNote {
+  id        String   @id @default(cuid())
+  patientId String
+  content   String
+  authorId  String?
+  createdAt DateTime @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  author  User?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([patientId, createdAt])
+}
+
+// ───────────────────────── Profissionais e serviços ─────────────────────────
+
+model Professional {
+  id             String   @id @default(cuid())
+  name           String
+  specialty      String?
+  registryType   String? // CRM, CRP, CREFITO...
+  registryNumber String?
+  cpf            String?
+  phone          String?
+  email          String?
+  color          String   @default("#2f7d5b")
+  notes          String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  engagements  Engagement[]
+  appointments Appointment[]
+
+  @@index([name])
+}
+
+model Service {
+  id                String      @id @default(cuid())
+  name              String
+  kind              ServiceKind @default(SESSION)
+  defaultPriceCents Int         @default(0)
+  durationMinutes   Int         @default(50)
+  active            Boolean     @default(true)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  engagements  Engagement[]
+  appointments Appointment[]
+}
+
+// ───────────────────────── Lançamentos e agenda ─────────────────────────
+
+/// Lançamento: consulta / sessão / terapia lançada para um paciente.
+/// Gera os agendamentos (conforme a recorrência) e o financeiro.
+model Engagement {
+  id              String           @id @default(cuid())
+  number          Int              @unique @default(autoincrement())
+  patientId       String
+  professionalId  String
+  serviceId       String
+  quantity        Int
+  unitPriceCents  Int
+  discountCents   Int              @default(0)
+  totalCents      Int
+  recurrence      Recurrence       @default(NONE)
+  durationMinutes Int
+  billingMode     BillingMode      @default(PER_SESSION)
+  installments    Int              @default(1)
+  firstDueDate    DateTime?        @db.Date
+  status          EngagementStatus @default(ACTIVE)
+  notes           String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  patient      Patient          @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  professional Professional     @relation(fields: [professionalId], references: [id], onDelete: Restrict)
+  service      Service          @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  appointments Appointment[]
+  entries      FinancialEntry[]
+
+  @@index([patientId])
+  @@index([professionalId])
+}
+
+/// Conflitos de horário (profissional ou paciente) também são barrados no banco
+/// por constraints de exclusão — ver migration `appointment_overlap_guard`.
+model Appointment {
+  id             String            @id @default(cuid())
+  engagementId   String?
+  sequence       Int?
+  patientId      String
+  professionalId String
+  serviceId      String?
+  startsAt       DateTime
+  endsAt         DateTime
+  status         AppointmentStatus @default(SCHEDULED)
+  priceCents     Int               @default(0)
+  notes          String?
+  canceledReason String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  engagement   Engagement?      @relation(fields: [engagementId], references: [id], onDelete: SetNull)
+  patient      Patient          @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  professional Professional     @relation(fields: [professionalId], references: [id], onDelete: Restrict)
+  service      Service?         @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  entries      FinancialEntry[]
+
+  @@index([startsAt])
+  @@index([professionalId, startsAt])
+  @@index([patientId, startsAt])
+  @@index([engagementId])
+}
+
+// ───────────────────────── Financeiro ─────────────────────────
+
+model FinancialAccount {
+  id                  String      @id @default(cuid())
+  name                String      @unique
+  type                AccountType @default(BANK)
+  initialBalanceCents Int         @default(0)
+  active              Boolean     @default(true)
+  createdAt           DateTime    @default(now())
+
+  entries FinancialEntry[]
+}
+
+model FinancialCategory {
+  id        String    @id @default(cuid())
+  name      String
+  kind      EntryKind
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  entries FinancialEntry[]
+
+  @@unique([name, kind])
+}
+
+model Supplier {
+  id        String   @id @default(cuid())
+  name      String
+  document  String?
+  phone     String?
+  email     String?
+  notes     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  entries   FinancialEntry[]
+  movements StockMovement[]
+}
+
+/// Contas a receber (INCOME) e contas a pagar (EXPENSE).
+/// O extrato e o fluxo de caixa são derivados desta tabela.
+model FinancialEntry {
+  id                String         @id @default(cuid())
+  kind              EntryKind
+  description       String
+  amountCents       Int
+  dueDate           DateTime       @db.Date
+  status            EntryStatus    @default(PENDING)
+  paidOn            DateTime?      @db.Date
+  paidAmountCents   Int?
+  paymentMethod     PaymentMethod?
+  accountId         String?
+  categoryId        String?
+  patientId         String?
+  supplierId        String?
+  engagementId      String?
+  appointmentId     String?
+  installmentNumber Int?
+  installmentTotal  Int?
+  notes             String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  account     FinancialAccount?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  category    FinancialCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  patient     Patient?           @relation(fields: [patientId], references: [id], onDelete: SetNull)
+  supplier    Supplier?          @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  engagement  Engagement?        @relation(fields: [engagementId], references: [id], onDelete: SetNull)
+  appointment Appointment?       @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+  movement    StockMovement?
+
+  @@index([kind, status, dueDate])
+  @@index([accountId, paidOn])
+  @@index([patientId])
+}
+
+// ───────────────────────── Estoque ─────────────────────────
+
+model StockItem {
+  id           String   @id @default(cuid())
+  name         String
+  sku          String?  @unique
+  unit         String   @default("un")
+  category     String?
+  minQuantity  Int      @default(0)
+  quantity     Int      @default(0)
+  costCents    Int      @default(0)
+  notes        String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  movements StockMovement[]
+
+  @@index([name])
+}
+
+model StockMovement {
+  id            String            @id @default(cuid())
+  itemId        String
+  type          StockMovementType
+  /// Variação com sinal: entrada positiva, saída negativa.
+  quantity      Int
+  balanceAfter  Int
+  unitCostCents Int?
+  supplierId    String?
+  entryId       String?           @unique
+  reason        String?
+  occurredOn    DateTime          @db.Date
+  createdAt     DateTime          @default(now())
+
+  item     StockItem        @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  supplier Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  entry    FinancialEntry?  @relation(fields: [entryId], references: [id], onDelete: SetNull)
+
+  @@index([itemId, occurredOn])
+}
