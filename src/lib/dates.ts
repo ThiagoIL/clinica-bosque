@@ -76,29 +76,57 @@ export function isTimeString(value: string | undefined | null): value is string 
 
 export type RecurrenceKind = "NONE" | "DAILY" | "WEEKLY" | "BIWEEKLY" | "MONTHLY";
 
-/** Gera as datas das ocorrências de um lançamento. */
-export function occurrenceDates(start: string, recurrence: RecurrenceKind, count: number): string[] {
-  const dates: string[] = [];
-  for (let i = 0; i < count; i++) {
-    switch (recurrence) {
-      case "NONE":
-        dates.push(start);
-        break;
-      case "DAILY":
-        dates.push(addDays(start, i));
-        break;
-      case "WEEKLY":
-        dates.push(addDays(start, i * 7));
-        break;
-      case "BIWEEKLY":
-        dates.push(addDays(start, i * 14));
-        break;
-      case "MONTHLY":
-        dates.push(addMonths(start, i));
-        break;
+export const MAX_OCCURRENCES = 400;
+
+const daysBetween = (a: string, b: string) => Math.round((dateOnly(b).getTime() - dateOnly(a).getTime()) / 86_400_000);
+
+export type RepeatOptions = {
+  /** Quantidade de sessões (termina ao atingir). */
+  count?: number;
+  /** Data limite, inclusive (termina quando passar dela). */
+  until?: string;
+  /** Dias da semana (0 = domingo ... 6 = sábado) para repetição diária, semanal e quinzenal. */
+  weekdays?: number[];
+};
+
+/**
+ * Gera as datas das sessões de um lançamento.
+ * - Diária: todos os dias (ou só os dias da semana escolhidos).
+ * - Semanal / quinzenal: nos dias da semana escolhidos (padrão: o dia da semana da 1ª sessão).
+ * - Mensal: no mesmo dia do mês.
+ * Termina pela quantidade (`count`) e/ou pela data limite (`until`); no máximo MAX_OCCURRENCES.
+ */
+export function occurrenceDates(start: string, recurrence: RecurrenceKind, opts: RepeatOptions = {}): string[] {
+  const { count, until, weekdays } = opts;
+  if (recurrence === "NONE") return !until || start <= until ? [start] : [];
+  const limit = Math.min(count ?? MAX_OCCURRENCES, MAX_OCCURRENCES);
+  const out: string[] = [];
+
+  if (recurrence === "MONTHLY") {
+    for (let i = 0; out.length < limit && i < MAX_OCCURRENCES; i++) {
+      const d = addMonths(start, i);
+      if (until && d > until) break;
+      out.push(d);
     }
+    return out;
   }
-  return dates;
+
+  const days = new Set(
+    weekdays && weekdays.length
+      ? weekdays
+      : recurrence === "DAILY"
+        ? [0, 1, 2, 3, 4, 5, 6]
+        : [weekday(start)],
+  );
+  const firstWeek = startOfWeek(start);
+  for (let i = 0; out.length < limit && i < 366 * 5; i++) {
+    const d = addDays(start, i);
+    if (until && d > until) break;
+    if (!days.has(weekday(d))) continue;
+    if (recurrence === "BIWEEKLY" && Math.floor(daysBetween(firstWeek, startOfWeek(d)) / 7) % 2 !== 0) continue;
+    out.push(d);
+  }
+  return out;
 }
 
 // ── formatação (pt-BR) ──

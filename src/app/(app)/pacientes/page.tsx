@@ -35,7 +35,7 @@ export default async function PatientsPage({
   };
 
   const [patients, total] = await Promise.all([
-    db.patient.findMany({ where, orderBy: { name: "asc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE }),
+    db.patient.findMany({ where, orderBy: { name: "asc" }, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE, include: { healthPlan: { select: { name: true } } } }),
     db.patient.count({ where }),
   ]);
 
@@ -78,7 +78,7 @@ export default async function PatientsPage({
                 <th>Nome</th>
                 <th>Idade</th>
                 <th>Telefone</th>
-                <th>Convênio</th>
+                <th>Plano</th>
                 <th>Situação</th>
               </tr>
             </thead>
@@ -92,7 +92,7 @@ export default async function PatientsPage({
                   </td>
                   <td>{ageFromBirth(p.birthDate) ?? "—"}</td>
                   <td>{formatPhone(p.phone) || "—"}</td>
-                  <td>{p.healthInsurance ?? "—"}</td>
+                  <td>{p.healthPlan?.name ?? "—"}</td>
                   <td>{p.active ? <Badge tone="green">Ativo</Badge> : <Badge>Inativo</Badge>}</td>
                 </tr>
               ))}

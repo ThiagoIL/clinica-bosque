@@ -11,12 +11,14 @@ lançamento de consultas/sessões/terapias com agendamento recorrente, agenda co
 | Módulo | O que faz |
 | --- | --- |
 | **Pacientes** | Cadastro por seções: dados do paciente, familiar/responsável, saúde, financeiro e observações (+ histórico de anotações). |
-| **Profissionais** | Médicos/terapeutas, com cor própria na agenda. |
-| **Serviços** | Catálogo de consulta, sessão e terapia com valor e duração padrão. |
-| **Lançamentos** | Seleciona paciente, profissional, serviço, quantidade e valor. Repetição diária, semanal, quinzenal ou mensal gera todos os agendamentos e o financeiro (por sessão, pacote único ou parcelado). |
+| **Profissionais** | Médicos/terapeutas, com cor própria na agenda (paleta pronta ou cor personalizada). |
+| **Serviços** | Catálogo por tipo: consulta, retorno, sessão, terapia, exame. |
+| **Planos de saúde e tabela de preços** | Cadastro de convênios (o plano **Particular** sempre existe) e uma tabela de preços por plano para serviços e produtos, com opção de copiar de outro plano com ajuste percentual. O paciente tem um plano e o valor do lançamento é sugerido pela tabela. |
+| **Lançamentos** | Seleciona paciente, profissional, tipo/serviço, valor e a repetição (diária, semanal, quinzenal, mensal) com **dias da semana** à escolha e término por **quantidade de sessões, data ou mês**. Gera todos os agendamentos e o financeiro (por sessão, pacote único ou parcelado). Lançamentos de **retorno** têm tipo próprio. Pode ser **editado** depois. |
 | **Agenda** | Visões dia/semana/mês; filtros por profissional e paciente; confirmar, marcar realizado/faltou, cancelar e reagendar. |
 | **Financeiro** | Contas a receber e a pagar (com parcelamento e baixa), extrato por conta com saldo corrido e fluxo de caixa (realizado × previsto). |
 | **Estoque** | Itens, saldo mínimo, entradas/saídas/ajustes; compra pode gerar conta a pagar. |
+| **Usuários** | Administradores criam e editam usuários (perfis *Administrador* e *Atendimento*). Cada usuário altera a própria senha em *Minha conta*. |
 
 ### Regras importantes
 
@@ -91,7 +93,8 @@ src/proxy.ts       barreira de acesso (redireciona para /login sem sessão)
 
 ## Próximos passos sugeridos
 
-- Gestão de múltiplos usuários/perfis (hoje há um administrador criado pelo ambiente).
+- Permissões por perfil (hoje o perfil Atendimento só não acessa *Usuários*).
+- Venda de produtos nos lançamentos (os preços de produtos já ficam na tabela de preços).
 - Relatórios (produção por profissional, inadimplência) e exportação CSV.
 - Lembretes de consulta por WhatsApp/e-mail e portal do paciente.
 - Prontuário/evolução clínica com anexos.

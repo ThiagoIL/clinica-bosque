@@ -29,7 +29,7 @@ export default async function SuppliersPage({
 
       {editId !== undefined && (
         <Card title={editing ? `Editar ${editing.name}` : "Novo fornecedor"} className="mb-6">
-          <ActionForm action={saveSupplier}>
+          <ActionForm key={editing?.id ?? "new"} action={saveSupplier}>
             {editing && <input type="hidden" name="id" value={editing.id} />}
             <FormGrid>
               <TextField name="name" label="Nome / razão social" required span={2} defaultValue={editing?.name} />

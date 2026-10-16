@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import {
   ArrowDownCircle, ArrowUpCircle, Boxes, CalendarDays, ClipboardList, Landmark, LayoutDashboard,
-  LineChart, Menu, Package, Stethoscope, Tags, Truck, Users, Wallet, X,
+  HeartPulse, LineChart, Menu, Package, ReceiptText, Stethoscope, Tags, Truck, UserCog, Users, Wallet, X,
 } from "lucide-react";
 
 const NAV = [
@@ -42,13 +42,16 @@ const NAV = [
     title: "Cadastros",
     items: [
       { href: "/servicos", label: "Serviços", icon: Tags },
+      { href: "/planos", label: "Planos de saúde", icon: HeartPulse },
+      { href: "/precos", label: "Tabela de preços", icon: ReceiptText },
       { href: "/fornecedores", label: "Fornecedores", icon: Truck },
       { href: "/financeiro/contas", label: "Contas e categorias", icon: Landmark },
+      { href: "/usuarios", label: "Usuários", icon: UserCog, adminOnly: true },
     ],
   },
 ];
 
-export function AppShell({ children, footer }: { children: ReactNode; footer: ReactNode }) {
+export function AppShell({ children, footer, isAdmin }: { children: ReactNode; footer: ReactNode; isAdmin: boolean }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -65,7 +68,9 @@ export function AppShell({ children, footer }: { children: ReactNode; footer: Re
             </p>
           )}
           <ul className="space-y-0.5">
-            {group.items.map(({ href, label, icon: Icon }) => (
+            {group.items
+              .filter((item) => !("adminOnly" in item && item.adminOnly) || isAdmin)
+              .map(({ href, label, icon: Icon }) => (
               <li key={href}>
                 <Link
                   href={href}

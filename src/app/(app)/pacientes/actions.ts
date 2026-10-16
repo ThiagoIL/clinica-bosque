@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { runAction } from "@/lib/action";
 import { dateOnly } from "@/lib/dates";
 import {
-  UserError, checkbox, cpf, digits, email, optional, optionalDate, optionalEnum,
+  UserError, checkbox, cpf, digits, email, optional, optionalId, optionalDate, optionalEnum,
   optionalInteger, parseForm, required, type FormState,
 } from "@/lib/form";
 
@@ -43,7 +43,7 @@ const patientSchema = z.object({
   emergencyContactRelationship: optional(60),
   emergencyContactPhone: digits(11),
   // saúde
-  healthInsurance: optional(100),
+  healthPlanId: optionalId(),
   healthInsuranceNumber: optional(60),
   bloodType: optional(5),
   allergies: optional(2000),
@@ -68,10 +68,12 @@ const patientSchema = z.object({
 export async function savePatient(_: FormState, formData: FormData): Promise<FormState> {
   const parsed = parseForm(patientSchema, formData);
   if (parsed.state) return parsed.state;
-  const { id, birthDate, active, ...rest } = parsed.data;
+  const { id, birthDate, active, healthPlanId, ...rest } = parsed.data;
 
   return runAction(formData, async () => {
-    const data = { ...rest, birthDate: birthDate ? dateOnly(birthDate) : null };
+    // sem plano informado, o paciente é Particular
+    const planId = healthPlanId ?? (await db.healthPlan.findFirst({ where: { isDefault: true } }))?.id ?? null;
+    const data = { ...rest, healthPlanId: planId, birthDate: birthDate ? dateOnly(birthDate) : null };
     if (id) {
       await db.patient.update({ where: { id }, data: { ...data, active } });
       return { success: "Dados do paciente salvos." };

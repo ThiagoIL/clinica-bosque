@@ -38,6 +38,13 @@ export async function bootstrap() {
     }
   }
 
+  // O plano "Particular" sempre existe: é o padrão dos pacientes e a base da tabela de preços.
+  if ((await db.healthPlan.count({ where: { isDefault: true } })) === 0) {
+    const existing = await db.healthPlan.findFirst({ where: { name: { equals: "Particular", mode: "insensitive" } } });
+    if (existing) await db.healthPlan.update({ where: { id: existing.id }, data: { isDefault: true } });
+    else await db.healthPlan.create({ data: { name: "Particular", isDefault: true } });
+  }
+
   if ((await db.financialCategory.count()) === 0) {
     await db.financialCategory.createMany({ data: DEFAULT_CATEGORIES.map((c) => ({ ...c })), skipDuplicates: true });
   }

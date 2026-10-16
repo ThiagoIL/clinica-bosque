@@ -59,3 +59,10 @@ export async function requireUser() {
   if (!user) redirect("/login");
   return user;
 }
+
+/** Somente administradores; os demais voltam ao início. */
+export async function requireAdmin() {
+  const user = await requireUser();
+  if (user.role !== "ADMIN") redirect("/");
+  return user;
+}

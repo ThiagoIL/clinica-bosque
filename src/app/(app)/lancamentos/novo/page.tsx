@@ -11,11 +11,18 @@ export default async function NewEngagementPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
-  const [patients, professionals, services] = await Promise.all([
-    db.patient.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+  const [patients, professionals, services, plans, prices] = await Promise.all([
+    db.patient.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, healthPlanId: true } }),
     db.professional.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     db.service.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+    db.healthPlan.findMany({ orderBy: [{ isDefault: "desc" }, { name: "asc" }], select: { id: true, name: true, isDefault: true } }),
+    db.servicePrice.findMany(),
   ]);
+
+  const priceMap = new Map<string, Record<string, number>>();
+  for (const p of prices) {
+    priceMap.set(p.serviceId, { ...(priceMap.get(p.serviceId) ?? {}), [p.healthPlanId]: p.priceCents });
+  }
 
   const missing = [
     patients.length === 0 && { label: "Cadastrar um paciente", href: "/pacientes/novo" },
@@ -30,7 +37,7 @@ export default async function NewEngagementPage({
     <>
       <PageHeader
         title="Novo lançamento"
-        description="Lance a consulta, sessão ou terapia: o sistema agenda os horários e gera o financeiro."
+        description="Lance a consulta, retorno, sessão ou terapia: o sistema agenda os horários e gera o financeiro."
         back={{ href: "/lancamentos", label: "Lançamentos" }}
       />
       {missing.length > 0 ? (
@@ -46,9 +53,16 @@ export default async function NewEngagementPage({
         />
       ) : (
         <EngagementForm
-          patients={patients}
+          patients={patients.map((p) => ({ id: p.id, name: p.name, planId: p.healthPlanId }))}
           professionals={professionals}
-          services={services.map((s) => ({ id: s.id, name: s.name, priceCents: s.defaultPriceCents, duration: s.durationMinutes }))}
+          plans={plans}
+          services={services.map((s) => ({
+            id: s.id,
+            name: s.name,
+            kind: s.kind,
+            duration: s.durationMinutes,
+            prices: priceMap.get(s.id) ?? {},
+          }))}
           defaults={{
             patientId: param(sp.patientId),
             professionalId: param(sp.professionalId),

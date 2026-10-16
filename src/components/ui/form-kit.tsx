@@ -189,7 +189,7 @@ export function TextField({
   /** Modo controlado (opcional). */
   value?: string;
   onChange?: (value: string) => void;
-  type?: "text" | "email" | "date" | "time" | "number" | "password" | "tel";
+  type?: "text" | "email" | "date" | "time" | "month" | "number" | "password" | "tel";
   placeholder?: string;
   inputMode?: "text" | "numeric" | "decimal" | "tel" | "email";
   maxLength?: number;
@@ -308,6 +308,87 @@ export function TextareaField({
         className="input resize-y"
       />
     </FieldShell>
+  );
+}
+
+const PALETTE = [
+  { value: "#2f8f68", name: "Verde" },
+  { value: "#65a30d", name: "Lima" },
+  { value: "#0d9488", name: "Turquesa" },
+  { value: "#0891b2", name: "Ciano" },
+  { value: "#3b82f6", name: "Azul" },
+  { value: "#6366f1", name: "Índigo" },
+  { value: "#8b5cf6", name: "Violeta" },
+  { value: "#db2777", name: "Rosa" },
+  { value: "#e11d48", name: "Vermelho" },
+  { value: "#f97316", name: "Laranja" },
+  { value: "#d97706", name: "Âmbar" },
+  { value: "#64748b", name: "Cinza" },
+];
+
+/** Seletor de cor com paleta pronta (um clique) e opção de cor personalizada. */
+export function ColorField({ name, label, defaultValue = PALETTE[0].value, span }: { name: string; label: string; defaultValue?: string; span?: Span }) {
+  const [color, setColor] = useState(defaultValue);
+  const inPalette = PALETTE.some((c) => c.value.toLowerCase() === color.toLowerCase());
+  return (
+    <div className={spanClass(span)}>
+      <span className="label">{label}</span>
+      <input type="hidden" name={name} value={color} />
+      <div className="flex flex-wrap items-center gap-2" role="radiogroup" aria-label={label}>
+        {PALETTE.map((c) => {
+          const selected = c.value.toLowerCase() === color.toLowerCase();
+          return (
+            <button
+              key={c.value}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              aria-label={c.name}
+              title={c.name}
+              onClick={() => setColor(c.value)}
+              className={clsx(
+                "size-8 rounded-full ring-offset-2 transition",
+                selected ? "ring-2 ring-ink" : "hover:scale-110",
+              )}
+              style={{ background: c.value }}
+            />
+          );
+        })}
+        <label
+          className={clsx(
+            "relative flex size-8 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-dashed border-muted text-xs text-muted ring-offset-2",
+            !inPalette && "ring-2 ring-ink",
+          )}
+          title="Cor personalizada"
+          style={!inPalette ? { background: color, borderStyle: "solid", borderColor: color } : undefined}
+        >
+          {inPalette && "+"}
+          <input
+            type="color"
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
+            className="absolute inset-0 cursor-pointer opacity-0"
+            aria-label="Cor personalizada"
+          />
+        </label>
+      </div>
+    </div>
+  );
+}
+
+/** Campo de valor sem rótulo, para células de tabela (ex.: tabela de preços). */
+export function PriceInput({ name, defaultValue, placeholder = "—" }: { name: string; defaultValue?: string; placeholder?: string }) {
+  const error = useFieldError(name);
+  return (
+    <input
+      name={name}
+      defaultValue={defaultValue ?? ""}
+      placeholder={placeholder}
+      inputMode="decimal"
+      aria-label="Preço"
+      aria-invalid={error ? true : undefined}
+      className="input w-32 text-right tabular-nums"
+    />
   );
 }
 

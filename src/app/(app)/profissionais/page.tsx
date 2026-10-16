@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatPhone } from "@/lib/cpf";
-import { ActionForm, CheckboxField, FormActions, FormGrid, MaskedField, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
+import { ActionForm, CheckboxField, ColorField, FormActions, FormGrid, MaskedField, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
 import { Badge, Card, EmptyState, LinkButton, PageHeader, param } from "@/components/ui/primitives";
 import { saveProfessional } from "./actions";
 
@@ -31,7 +31,7 @@ export default async function ProfessionalsPage({
 
       {showForm && (
         <Card title={editing ? `Editar ${editing.name}` : "Novo profissional"} className="mb-6">
-          <ActionForm action={saveProfessional}>
+          <ActionForm key={editing?.id ?? "new"} action={saveProfessional}>
             {editing && <input type="hidden" name="id" value={editing.id} />}
             <FormGrid>
               <TextField name="name" label="Nome" required span={2} defaultValue={editing?.name} />
@@ -41,13 +41,7 @@ export default async function ProfessionalsPage({
               <MaskedField name="cpf" label="CPF" mask="cpf" defaultValue={editing?.cpf} />
               <MaskedField name="phone" label="Telefone" mask="phone" defaultValue={editing?.phone} />
               <TextField name="email" label="E-mail" type="email" defaultValue={editing?.email} />
-              <div>
-                <label htmlFor="color" className="label">Cor na agenda</label>
-                <input
-                  id="color" name="color" type="color" defaultValue={editing?.color ?? "#2f8f68"}
-                  className="h-9.5 w-full cursor-pointer rounded-lg border border-line bg-surface p-1"
-                />
-              </div>
+              <ColorField name="color" label="Cor na agenda" span={2} defaultValue={editing?.color ?? "#2f8f68"} />
               <TextareaField name="notes" label="Observações" span={3} defaultValue={editing?.notes} />
               <CheckboxField name="active" label="Profissional ativo" defaultChecked={editing?.active ?? true} />
             </FormGrid>

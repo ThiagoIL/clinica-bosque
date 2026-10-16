@@ -48,7 +48,7 @@ export default async function StockPage({
 
       {editId !== undefined && (
         <Card title={editing ? `Editar ${editing.name}` : "Novo item de estoque"} className="mb-6">
-          <ActionForm action={saveStockItem}>
+          <ActionForm key={editing?.id ?? "new"} action={saveStockItem}>
             {editing && <input type="hidden" name="id" value={editing.id} />}
             <FormGrid cols={4}>
               <TextField name="name" label="Nome" required span={2} defaultValue={editing?.name} />

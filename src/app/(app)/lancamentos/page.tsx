@@ -4,7 +4,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { formatDateTime } from "@/lib/dates";
-import { engagementStatusLabels, recurrenceLabels, optionsOf } from "@/lib/labels";
+import { engagementStatusLabels, recurrenceLabels, optionsOf, serviceKindLabels } from "@/lib/labels";
 import { engagementTone } from "@/lib/status";
 import { Badge, EmptyState, FilterBar, FilterField, LinkButton, PageHeader, Pagination, param } from "@/components/ui/primitives";
 
@@ -37,7 +37,7 @@ export default async function EngagementsPage({
       include: {
         patient: { select: { name: true } },
         professional: { select: { name: true } },
-        service: { select: { name: true } },
+        service: { select: { name: true, kind: true } },
         appointments: { select: { startsAt: true }, orderBy: { startsAt: "asc" }, take: 1 },
       },
     }),
@@ -104,7 +104,7 @@ export default async function EngagementsPage({
                   </td>
                   <td>
                     {e.service.name}
-                    <p className="text-xs text-muted">{recurrenceLabels[e.recurrence].split(" (")[0]}</p>
+                    <p className="text-xs text-muted">{serviceKindLabels[e.service.kind]} · {recurrenceLabels[e.recurrence].split(" (")[0]}</p>
                   </td>
                   <td>{e.professional.name}</td>
                   <td className="whitespace-nowrap">{e.appointments[0] ? formatDateTime(e.appointments[0].startsAt) : "—"}</td>

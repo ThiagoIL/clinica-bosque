@@ -19,10 +19,14 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function PatientPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const patient = await db.patient.findUnique({ where: { id } });
+  const patient = await db.patient.findUnique({ where: { id }, include: { healthPlan: true } });
   if (!patient) notFound();
 
-  const [notes, appointments, openEntries] = await Promise.all([
+  const [plans, notes, appointments, openEntries] = await Promise.all([
+    db.healthPlan.findMany({
+      where: { OR: [{ active: true }, { id: patient.healthPlanId ?? "" }] },
+      orderBy: [{ isDefault: "desc" }, { name: "asc" }],
+    }),
     db.patientNote.findMany({
       where: { patientId: id },
       orderBy: { createdAt: "desc" },
@@ -48,7 +52,7 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
     <>
       <PageHeader
         title={patient.name}
-        description={[age != null ? `${age} anos` : null, formatPhone(patient.phone) || null, patient.healthInsurance]
+        description={[age != null ? `${age} anos` : null, formatPhone(patient.phone) || null, patient.healthPlan?.name]
           .filter(Boolean)
           .join(" · ")}
         back={{ href: "/pacientes", label: "Pacientes" }}
@@ -61,7 +65,7 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
         }
       />
 
-      <PatientForm patient={patient} />
+      <PatientForm patient={patient} plans={plans} />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card title="Anotações" description="Histórico de observações sobre o paciente">

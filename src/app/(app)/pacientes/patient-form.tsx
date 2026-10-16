@@ -13,7 +13,15 @@ const MARITAL = ["Solteiro(a)", "Casado(a)", "União estável", "Divorciado(a)",
 const BLOOD = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((v) => ({ value: v, label: v }));
 const DUE_DAYS = Array.from({ length: 28 }, (_, i) => ({ value: String(i + 1), label: `Dia ${i + 1}` }));
 
-export function PatientForm({ patient }: { patient?: Patient }) {
+export function PatientForm({
+  patient,
+  plans,
+  defaultPlanId,
+}: {
+  patient?: Patient;
+  plans: { id: string; name: string }[];
+  defaultPlanId?: string;
+}) {
   const p = patient;
   return (
     <ActionForm action={savePatient} className="card p-5">
@@ -84,7 +92,12 @@ export function PatientForm({ patient }: { patient?: Patient }) {
             label: "Dados de saúde",
             content: (
               <FormGrid>
-                <TextField name="healthInsurance" label="Convênio / plano" defaultValue={p?.healthInsurance} />
+                <SelectField
+                  name="healthPlanId" label="Plano de saúde" allowEmpty={false}
+                  options={plans.map((x) => ({ value: x.id, label: x.name }))}
+                  defaultValue={p?.healthPlanId ?? defaultPlanId}
+                  hint="Define a tabela de preços usada nos lançamentos"
+                />
                 <TextField name="healthInsuranceNumber" label="Nº da carteirinha" defaultValue={p?.healthInsuranceNumber} />
                 <SelectField name="bloodType" label="Tipo sanguíneo" options={BLOOD} defaultValue={p?.bloodType} />
                 <TextareaField name="diagnosis" label="Diagnóstico / queixa principal" span={2} defaultValue={p?.diagnosis} />

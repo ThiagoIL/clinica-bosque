@@ -23,22 +23,39 @@ async function main() {
     ],
   });
 
-  await db.service.createMany({
-    data: [
-      { name: "Consulta médica", kind: "CONSULTATION", defaultPriceCents: 25000, durationMinutes: 40 },
-      { name: "Sessão de psicoterapia", kind: "SESSION", defaultPriceCents: 15000, durationMinutes: 50 },
-      { name: "Fisioterapia", kind: "THERAPY", defaultPriceCents: 12000, durationMinutes: 45 },
-      { name: "Avaliação inicial", kind: "EXAM", defaultPriceCents: 20000, durationMinutes: 60 },
-    ],
-  });
+  // Planos de saúde: o "Particular" sempre existe (o app também o cria ao iniciar).
+  const particular =
+    (await db.healthPlan.findFirst({ where: { isDefault: true } })) ??
+    (await db.healthPlan.create({ data: { name: "Particular", isDefault: true } }));
+  const unimed = await db.healthPlan.create({ data: { name: "Unimed" } });
+  const bradesco = await db.healthPlan.create({ data: { name: "Bradesco Saúde" } });
+
+  // [nome, tipo, duração (min), preço Particular, preço Unimed, preço Bradesco] (centavos)
+  const catalog = [
+    ["Consulta médica", "CONSULTATION", 40, 25000, 18000, 17000],
+    ["Retorno médico", "RETURN", 30, 0, 0, 0],
+    ["Sessão de psicoterapia", "SESSION", 50, 15000, 11000, 10500],
+    ["Fisioterapia", "THERAPY", 45, 12000, 8500, 8000],
+    ["Avaliação inicial", "EXAM", 60, 20000, 14000, 13500],
+  ] as const;
+  for (const [name, kind, durationMinutes, p0, p1, p2] of catalog) {
+    const service = await db.service.create({ data: { name, kind, durationMinutes } });
+    await db.servicePrice.createMany({
+      data: [
+        { serviceId: service.id, healthPlanId: particular.id, priceCents: p0 },
+        { serviceId: service.id, healthPlanId: unimed.id, priceCents: p1 },
+        { serviceId: service.id, healthPlanId: bradesco.id, priceCents: p2 },
+      ],
+    });
+  }
 
   await db.patient.createMany({
     data: [
-      { name: "Ana Beatriz Lima", phone: "11987654321", email: "ana@example.com", healthInsurance: "Particular" },
-      { name: "Bruno Carvalho", phone: "11976543210", healthInsurance: "Unimed" },
-      { name: "Carla Mendes", phone: "11965432109" },
-      { name: "Diego Santos", phone: "11954321098", healthInsurance: "Bradesco Saúde" },
-      { name: "Elisa Ferreira", phone: "11943210987" },
+      { name: "Ana Beatriz Lima", phone: "11987654321", email: "ana@example.com", healthPlanId: particular.id },
+      { name: "Bruno Carvalho", phone: "11976543210", healthPlanId: unimed.id },
+      { name: "Carla Mendes", phone: "11965432109", healthPlanId: particular.id },
+      { name: "Diego Santos", phone: "11954321098", healthPlanId: bradesco.id },
+      { name: "Elisa Ferreira", phone: "11943210987", healthPlanId: particular.id },
     ],
   });
 

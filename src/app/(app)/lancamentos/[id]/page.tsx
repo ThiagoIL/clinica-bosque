@@ -3,10 +3,10 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
-import { appointmentStatusLabels, billingModeLabels, engagementStatusLabels, recurrenceLabels } from "@/lib/labels";
+import { WEEKDAY_OPTIONS, appointmentStatusLabels, billingModeLabels, engagementStatusLabels, recurrenceLabels, serviceKindLabels } from "@/lib/labels";
 import { appointmentTone, engagementTone, entryDisplayStatus } from "@/lib/status";
 import { ActionForm, ConfirmSubmit } from "@/components/ui/form-kit";
-import { Badge, Card, PageHeader } from "@/components/ui/primitives";
+import { Badge, Card, LinkButton, PageHeader } from "@/components/ui/primitives";
 import { AppointmentActions } from "@/components/appointment-actions";
 import { cancelEngagement } from "../actions";
 
@@ -19,7 +19,8 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
     include: {
       patient: { select: { id: true, name: true } },
       professional: { select: { id: true, name: true } },
-      service: { select: { name: true } },
+      service: { select: { name: true, kind: true } },
+      healthPlan: { select: { name: true } },
       appointments: { orderBy: { startsAt: "asc" } },
       entries: { orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }] },
     },
@@ -35,7 +36,14 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
         title={`Lançamento #${engagement.number}`}
         description={`${engagement.service.name} · ${engagement.patient.name}`}
         back={{ href: "/lancamentos", label: "Lançamentos" }}
-        actions={<Badge tone={engagementTone(engagement.status)}>{engagementStatusLabels[engagement.status]}</Badge>}
+        actions={
+          <>
+            <Badge tone={engagementTone(engagement.status)}>{engagementStatusLabels[engagement.status]}</Badge>
+            {engagement.status !== "CANCELED" && (
+              <LinkButton href={`/lancamentos/${engagement.id}/editar`} variant="outline">Editar</LinkButton>
+            )}
+          </>
+        }
       />
 
       <div className="mb-6 grid gap-4 md:grid-cols-2">
@@ -48,7 +56,21 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
             </Info>
             <Info label="Profissional">{engagement.professional.name}</Info>
             <Info label="Serviço">{engagement.service.name}</Info>
-            <Info label="Repetição">{recurrenceLabels[engagement.recurrence].split(" (")[0]}</Info>
+            <Info label="Tipo">
+              <Badge tone={engagement.service.kind === "RETURN" ? "amber" : "gray"}>{serviceKindLabels[engagement.service.kind]}</Badge>
+            </Info>
+            <Info label="Plano de saúde">{engagement.healthPlan?.name ?? "—"}</Info>
+            <Info label="Repetição">
+              {recurrenceLabels[engagement.recurrence].split(" (")[0]}
+              {engagement.weekdays.length > 0 && (
+                <span className="block text-xs text-muted">
+                  {WEEKDAY_OPTIONS.filter((d) => engagement.weekdays.includes(d.value)).map((d) => d.label).join(", ")}
+                </span>
+              )}
+              {engagement.untilDate && (
+                <span className="block text-xs text-muted">até {formatDate(engagement.untilDate)}</span>
+              )}
+            </Info>
             <Info label="Sessões">{engagement.quantity} × {formatMoney(engagement.unitPriceCents)}</Info>
             <Info label="Desconto">{formatMoney(engagement.discountCents)}</Info>
             <Info label="Total"><strong>{formatMoney(engagement.totalCents)}</strong></Info>

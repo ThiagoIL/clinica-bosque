@@ -39,7 +39,7 @@ export default async function AccountsPage({
           </div>
           {accountEdit !== undefined && (
             <Card title={editingAccount ? "Editar conta" : "Nova conta"} className="mb-4">
-              <ActionForm action={saveAccount}>
+              <ActionForm key={editingAccount?.id ?? "new"} action={saveAccount}>
                 {editingAccount && <input type="hidden" name="id" value={editingAccount.id} />}
                 <FormGrid cols={2}>
                   <TextField name="name" label="Nome" required defaultValue={editingAccount?.name} />
@@ -88,7 +88,7 @@ export default async function AccountsPage({
           </div>
           {categoryEdit !== undefined && (
             <Card title={editingCategory ? "Editar categoria" : "Nova categoria"} className="mb-4">
-              <ActionForm action={saveCategory}>
+              <ActionForm key={editingCategory?.id ?? "new"} action={saveCategory}>
                 {editingCategory && <input type="hidden" name="id" value={editingCategory.id} />}
                 <FormGrid cols={2}>
                   <TextField name="name" label="Nome" required defaultValue={editingCategory?.name} />

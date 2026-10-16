@@ -25,10 +25,18 @@ enum Sex {
 
 enum ServiceKind {
   CONSULTATION
+  RETURN
   SESSION
   THERAPY
   EXAM
   OTHER
+}
+
+/// Como termina a repetição de um lançamento.
+enum RepeatEnd {
+  COUNT
+  UNTIL_DATE
+  UNTIL_MONTH
 }
 
 enum Recurrence {
@@ -144,7 +152,7 @@ model Patient {
   emergencyContactPhone       String?
 
   // Dados de saúde
-  healthInsurance       String?
+  healthPlanId          String?
   healthInsuranceNumber String?
   bloodType             String?
   allergies             String?
@@ -170,12 +178,14 @@ model Patient {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  healthPlan   HealthPlan?      @relation(fields: [healthPlanId], references: [id], onDelete: SetNull)
   notes        PatientNote[]
   engagements  Engagement[]
   appointments Appointment[]
   entries      FinancialEntry[]
 
   @@index([name])
+  @@index([healthPlanId])
 }
 
 model PatientNote {
@@ -218,14 +228,59 @@ model Service {
   id                String      @id @default(cuid())
   name              String
   kind              ServiceKind @default(SESSION)
-  defaultPriceCents Int         @default(0)
   durationMinutes   Int         @default(50)
   active            Boolean     @default(true)
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
+  prices       ServicePrice[]
   engagements  Engagement[]
   appointments Appointment[]
+}
+
+// ───────────────────────── Planos de saúde e tabela de preços ─────────────────────────
+
+/// Plano de saúde / convênio. O plano "Particular" (isDefault) sempre existe.
+model HealthPlan {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isDefault Boolean  @default(false)
+  notes     String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  patients      Patient[]
+  servicePrices ServicePrice[]
+  productPrices ProductPrice[]
+  engagements   Engagement[]
+}
+
+/// Tabela de preços: valor de cada serviço em cada plano de saúde.
+model ServicePrice {
+  id           String   @id @default(cuid())
+  serviceId    String
+  healthPlanId String
+  priceCents   Int
+  updatedAt    DateTime @updatedAt
+
+  service    Service    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  healthPlan HealthPlan @relation(fields: [healthPlanId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, healthPlanId])
+}
+
+/// Tabela de preços: valor de venda de cada produto (item de estoque) em cada plano.
+model ProductPrice {
+  id           String   @id @default(cuid())
+  stockItemId  String
+  healthPlanId String
+  priceCents   Int
+  updatedAt    DateTime @updatedAt
+
+  stockItem  StockItem  @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
+  healthPlan HealthPlan @relation(fields: [healthPlanId], references: [id], onDelete: Cascade)
+
+  @@unique([stockItemId, healthPlanId])
 }
 
 // ───────────────────────── Lançamentos e agenda ─────────────────────────
@@ -238,11 +293,16 @@ model Engagement {
   patientId       String
   professionalId  String
   serviceId       String
+  healthPlanId    String?
   quantity        Int
   unitPriceCents  Int
   discountCents   Int              @default(0)
   totalCents      Int
   recurrence      Recurrence       @default(NONE)
+  /// Dias da semana das sessões (0 = domingo ... 6 = sábado); vazio = dia da primeira sessão.
+  weekdays        Int[]
+  repeatEnd       RepeatEnd        @default(COUNT)
+  untilDate       DateTime?        @db.Date
   durationMinutes Int
   billingMode     BillingMode      @default(PER_SESSION)
   installments    Int              @default(1)
@@ -255,6 +315,7 @@ model Engagement {
   patient      Patient          @relation(fields: [patientId], references: [id], onDelete: Restrict)
   professional Professional     @relation(fields: [professionalId], references: [id], onDelete: Restrict)
   service      Service          @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  healthPlan   HealthPlan?      @relation(fields: [healthPlanId], references: [id], onDelete: SetNull)
   appointments Appointment[]
   entries      FinancialEntry[]
 
@@ -385,6 +446,7 @@ model StockItem {
   updatedAt    DateTime @updatedAt
 
   movements StockMovement[]
+  prices    ProductPrice[]
 
   @@index([name])
 }
