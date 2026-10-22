@@ -15,6 +15,7 @@ const EVENT_LABELS: Record<string, string> = {
   BLOCK_MESSAGE: "Mensagem",
   MODULES: "Módulos",
   PASSWORD: "Senha",
+  USER: "Usuário",
 };
 
 export default async function PlatformHomePage() {

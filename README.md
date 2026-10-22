@@ -32,7 +32,8 @@ Não precisa de domínio nem certificado extras. Opcionalmente também pode resp
 - **Módulos liberados**: o fornecedor escolhe quais módulos aparecem. O que ele desliga some para todos, inclusive
   para o administrador da empresa (os dados são mantidos). O administrador da empresa distribui, entre os módulos
   liberados, o acesso de cada perfil.
-- Histórico de bloqueios, liberações e mudanças de módulos.
+- **Usuários da administração**: mais de uma pessoa pode acessar o console (criar, editar, redefinir senha e desativar).
+- Histórico de bloqueios, liberações, mudanças de módulos e de usuários.
 
 O caminho interno do console não existe fora dele (retorna 404), o cookie do console só é enviado a esse caminho
 e as sessões do console e da clínica não se misturam.

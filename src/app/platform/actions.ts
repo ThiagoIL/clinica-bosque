@@ -6,7 +6,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { clearAccessCache } from "@/lib/access";
-import { UserError, formValues, optional, parseForm, required, type FormState } from "@/lib/form";
+import { UserError, checkbox, formValues, optional, parseForm, required, type FormState } from "@/lib/form";
 import { MODULES, MODULE_KEYS, moduleLabel } from "@/lib/modules";
 import { createPlatformSession, destroyPlatformSession, getPlatformBase } from "@/lib/platform-auth";
 import { logPlatformEvent, runPlatformAction } from "@/lib/platform-action";
@@ -150,5 +150,64 @@ export async function updatePlatformAccount(_: FormState, formData: FormData): P
     await db.platformAdmin.update({ where: { id: admin.id }, data: { name, passwordHash: await bcrypt.hash(newPassword, 12) } });
     await logPlatformEvent("PASSWORD", "Senha do fornecedor alterada", admin.email);
     return { success: "Senha alterada com sucesso." };
+  });
+}
+
+// ───────────────────────── usuários do fornecedor ─────────────────────────
+
+const MIN_PLATFORM_PASSWORD = 10;
+
+const adminSchema = z.object({
+  id: z.string().optional(),
+  name: required("Nome", 120),
+  email: z
+    .string({ error: "E-mail é obrigatório" })
+    .trim()
+    .toLowerCase()
+    .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "E-mail inválido"),
+  password: z.string().optional(),
+  active: checkbox(),
+});
+
+/** Cria ou edita uma conta de acesso ao console do fornecedor. */
+export async function savePlatformAdmin(_: FormState, formData: FormData): Promise<FormState> {
+  const parsed = parseForm(adminSchema, formData);
+  if (parsed.state) return parsed.state;
+  const { id, password, ...data } = parsed.data;
+
+  return runPlatformAction(formData, async (current) => {
+    if (password) {
+      if (password.length < MIN_PLATFORM_PASSWORD) {
+        throw new UserError(`A senha deve ter ao menos ${MIN_PLATFORM_PASSWORD} caracteres.`, {
+          password: `Mínimo de ${MIN_PLATFORM_PASSWORD} caracteres`,
+        });
+      }
+    } else if (!id) {
+      throw new UserError("Defina uma senha para o novo usuário.", { password: "Senha é obrigatória" });
+    }
+
+    const sameEmail = await db.platformAdmin.findUnique({ where: { email: data.email } });
+    if (sameEmail && sameEmail.id !== id) {
+      throw new UserError("Já existe um usuário com este e-mail.", { email: "E-mail já cadastrado" });
+    }
+
+    if (id) {
+      const target = await db.platformAdmin.findUnique({ where: { id } });
+      if (!target) throw new UserError("Usuário não encontrado.");
+      if (id === current.id && !data.active) throw new UserError("Você não pode desativar o seu próprio usuário.");
+      if (target.active && !data.active) {
+        const others = await db.platformAdmin.count({ where: { active: true, id: { not: id } } });
+        if (others === 0) throw new UserError("É necessário manter ao menos um usuário ativo.");
+      }
+      await db.platformAdmin.update({
+        where: { id },
+        data: { ...data, ...(password ? { passwordHash: await bcrypt.hash(password, 12) } : {}) },
+      });
+      await logPlatformEvent("USER", `Usuário atualizado: ${data.email}${password ? " (senha redefinida)" : ""}`, current.email);
+    } else {
+      await db.platformAdmin.create({ data: { ...data, passwordHash: await bcrypt.hash(password!, 12) } });
+      await logPlatformEvent("USER", `Usuário criado: ${data.email}`, current.email);
+    }
+    return { redirectTo: `${await getPlatformBase()}/usuarios` };
   });
 }
