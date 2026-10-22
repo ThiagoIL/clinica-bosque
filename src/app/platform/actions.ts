@@ -8,7 +8,7 @@ import { db } from "@/lib/db";
 import { clearAccessCache } from "@/lib/access";
 import { UserError, formValues, optional, parseForm, required, type FormState } from "@/lib/form";
 import { MODULES, MODULE_KEYS, moduleLabel } from "@/lib/modules";
-import { createPlatformSession, destroyPlatformSession } from "@/lib/platform-auth";
+import { createPlatformSession, destroyPlatformSession, getPlatformBase } from "@/lib/platform-auth";
 import { logPlatformEvent, runPlatformAction } from "@/lib/platform-action";
 
 // ───────────────────────── login ─────────────────────────
@@ -49,12 +49,13 @@ export async function platformLogin(_: FormState, formData: FormData): Promise<F
 
   attempts.delete(key);
   await createPlatformSession(admin.id);
-  redirect("/");
+  redirect((await getPlatformBase()) || "/");
 }
 
 export async function platformLogout() {
+  const base = await getPlatformBase();
   await destroyPlatformSession();
-  redirect("/login");
+  redirect(`${base}/login`);
 }
 
 // ───────────────────────── bloqueio ─────────────────────────

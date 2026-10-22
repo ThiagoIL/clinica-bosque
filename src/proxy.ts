@@ -2,22 +2,32 @@ import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import { hasAccess, loadSnapshot } from "@/lib/access";
 import { moduleForPath } from "@/lib/modules";
+import { PLATFORM_BASE_HEADER, isPlatformHost, platformBasePath, stripPlatformBase } from "@/lib/platform-config";
 
 const SESSION_COOKIE = "bosque_session";
 const PLATFORM_COOKIE = "bosque_platform";
 
 /**
  * Porta de entrada de todas as requisições:
- *  - domínio de administração (PLATFORM_ADMIN_HOSTS) → console do fornecedor (/platform/*);
- *  - domínio da clínica → sistema, com sessão, bloqueio e permissões por módulo.
+ *  - console do fornecedor, em um caminho do domínio da clínica (PLATFORM_ADMIN_PATH, padrão /sistema-admin)
+ *    ou em um domínio dedicado (PLATFORM_ADMIN_HOSTS) → telas internas /platform/*;
+ *  - o resto é o sistema da clínica, com sessão, bloqueio e permissões por módulo.
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const host = hostOf(request);
 
-  if (isPlatformHost(host)) return handlePlatform(request);
+  // 1) domínio dedicado ao console
+  if (isPlatformHost(hostOf(request))) {
+    const publicPath = pathname.startsWith("/platform") ? pathname.slice("/platform".length) || "/" : pathname;
+    return handlePlatform(request, "", publicPath);
+  }
 
-  // o console do fornecedor não existe no domínio da clínica
+  // 2) caminho do console dentro do domínio da clínica
+  const base = platformBasePath();
+  const inner = stripPlatformBase(pathname, base);
+  if (base && inner !== null) return handlePlatform(request, base, inner);
+
+  // o caminho interno do console não existe fora dele
   if (pathname === "/platform" || pathname.startsWith("/platform/")) {
     return new NextResponse("Não encontrado", { status: 404 });
   }
@@ -70,22 +80,24 @@ async function handleClinic(request: NextRequest) {
   return NextResponse.next();
 }
 
-// ───────────────────────── domínio de administração ─────────────────────────
+// ───────────────────────── console do fornecedor ─────────────────────────
 
-async function handlePlatform(request: NextRequest) {
-  const { pathname, search } = request.nextUrl;
-  const publicPath = pathname.startsWith("/platform") ? pathname.slice("/platform".length) || "/" : pathname;
+/** `base` é o prefixo visível na URL ("" no domínio dedicado); `publicPath` é o caminho sem o prefixo. */
+async function handlePlatform(request: NextRequest, base: string, publicPath: string) {
+  const { search } = request.nextUrl;
   const internal = `/platform${publicPath === "/" ? "" : publicPath}`;
-
   const adminId = await verifiedSubject(request.cookies.get(PLATFORM_COOKIE)?.value, true);
 
+  // as telas do console usam este header para montar links e redirecionamentos com o prefixo certo
+  const headers = new Headers(request.headers);
+  headers.set(PLATFORM_BASE_HEADER, base);
+  const rewrite = () => NextResponse.rewrite(new URL(`${internal}${search}`, request.url), { request: { headers } });
+
   if (publicPath === "/login") {
-    return adminId
-      ? NextResponse.redirect(new URL("/", request.url))
-      : NextResponse.rewrite(new URL(`${internal}${search}`, request.url));
+    return adminId ? NextResponse.redirect(new URL(base || "/", request.url)) : rewrite();
   }
-  if (!adminId) return NextResponse.redirect(new URL("/login", request.url));
-  return NextResponse.rewrite(new URL(`${internal}${search}`, request.url));
+  if (!adminId) return NextResponse.redirect(new URL(`${base}/login`, request.url));
+  return rewrite();
 }
 
 // ───────────────────────── utilitários ─────────────────────────
@@ -93,16 +105,6 @@ async function handlePlatform(request: NextRequest) {
 function hostOf(request: NextRequest): string {
   const raw = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "";
   return raw.split(",")[0].trim().toLowerCase().replace(/:\d+$/, "");
-}
-
-function isPlatformHost(host: string): boolean {
-  const configured = (process.env.PLATFORM_ADMIN_HOSTS ?? "")
-    .split(",")
-    .map((h) => h.trim().toLowerCase())
-    .filter(Boolean);
-  if (configured.includes(host)) return true;
-  // facilita o desenvolvimento local: http://admin.localhost:3000
-  return process.env.NODE_ENV !== "production" && host.startsWith("admin.localhost");
 }
 
 /** Valida o JWT da sessão e devolve o id (sub). `platform` indica a audiência esperada. */

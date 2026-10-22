@@ -1,9 +1,10 @@
 import "server-only";
 import { cache } from "react";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { SignJWT, jwtVerify } from "jose";
 import { db } from "@/lib/db";
+import { PLATFORM_BASE_HEADER } from "@/lib/platform-config";
 
 export const PLATFORM_COOKIE = "bosque_platform";
 const TTL_SECONDS = 60 * 60 * 8; // 8 horas
@@ -14,7 +15,17 @@ function secret() {
   return new TextEncoder().encode(value);
 }
 
+/**
+ * Prefixo do console na requisição atual: "" (domínio dedicado) ou ex.: "/sistema-admin".
+ * Vem de um header que o proxy sempre define; valores estranhos são descartados.
+ */
+export async function getPlatformBase(): Promise<string> {
+  const value = (await headers()).get(PLATFORM_BASE_HEADER) ?? "";
+  return /^\/[A-Za-z0-9/_-]*$/.test(value) && !value.startsWith("//") ? value : "";
+}
+
 export async function createPlatformSession(adminId: string) {
+  const base = await getPlatformBase();
   const token = await new SignJWT({})
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(adminId)
@@ -27,13 +38,15 @@ export async function createPlatformSession(adminId: string) {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
-    path: "/",
+    // no modo por caminho, o cookie só é enviado ao console (nunca às telas da clínica)
+    path: base || "/",
     maxAge: TTL_SECONDS,
   });
 }
 
 export async function destroyPlatformSession() {
-  (await cookies()).delete(PLATFORM_COOKIE);
+  const base = await getPlatformBase();
+  (await cookies()).delete({ name: PLATFORM_COOKIE, path: base || "/" });
 }
 
 export const getPlatformAdmin = cache(async () => {
@@ -54,6 +67,6 @@ export const getPlatformAdmin = cache(async () => {
 
 export async function requirePlatformAdmin() {
   const admin = await getPlatformAdmin();
-  if (!admin) redirect("/login");
+  if (!admin) redirect(`${await getPlatformBase()}/login`);
   return admin;
 }

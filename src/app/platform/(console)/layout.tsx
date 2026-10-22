@@ -1,10 +1,11 @@
 import { LogOut, ShieldCheck } from "lucide-react";
-import { requirePlatformAdmin } from "@/lib/platform-auth";
+import { getPlatformBase, requirePlatformAdmin } from "@/lib/platform-auth";
 import { platformLogout } from "../actions";
 import { PlatformNav } from "./platform-nav";
 
 export default async function PlatformConsoleLayout({ children }: { children: React.ReactNode }) {
   const admin = await requirePlatformAdmin();
+  const base = await getPlatformBase();
   return (
     <div className="min-h-screen">
       <header className="bg-slate-900 text-white">
@@ -18,7 +19,7 @@ export default async function PlatformConsoleLayout({ children }: { children: Re
               <p className="text-xs text-slate-400">Clínica Bosque</p>
             </div>
           </div>
-          <PlatformNav />
+          <PlatformNav base={base} />
           <div className="flex items-center gap-3 text-sm">
             <span className="hidden text-slate-300 sm:inline">{admin.name}</span>
             <form action={platformLogout}>

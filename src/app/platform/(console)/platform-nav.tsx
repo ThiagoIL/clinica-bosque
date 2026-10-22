@@ -10,9 +10,11 @@ const ITEMS = [
   { href: "/conta", label: "Minha conta" },
 ];
 
-export function PlatformNav() {
-  // o navegador vê os caminhos sem o prefixo /platform (o proxy faz o rewrite)
-  const pathname = usePathname().replace(/^\/platform/, "") || "/";
+/** `base` é o prefixo do console na URL ("" no domínio dedicado, ex.: "/sistema-admin" no modo por caminho). */
+export function PlatformNav({ base }: { base: string }) {
+  // o navegador vê os caminhos sem o prefixo interno /platform (o proxy faz o rewrite)
+  const current = usePathname();
+  const pathname = (base && current.startsWith(base) ? current.slice(base.length) : current).replace(/^\/platform/, "") || "/";
   return (
     <nav className="flex gap-1">
       {ITEMS.map((item) => {
@@ -20,7 +22,7 @@ export function PlatformNav() {
         return (
           <Link
             key={item.href}
-            href={item.href}
+            href={`${base}${item.href === "/" && base ? "" : item.href}` || "/"}
             className={clsx(
               "rounded-lg px-3 py-1.5 text-sm transition-colors",
               active ? "bg-white/15 font-medium text-white" : "text-slate-300 hover:bg-white/10 hover:text-white",
