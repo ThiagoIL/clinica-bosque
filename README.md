@@ -17,8 +17,23 @@ lançamento de consultas/sessões/terapias com agendamento recorrente, agenda co
 | **Lançamentos** | Seleciona paciente, profissional, tipo/serviço, valor e a repetição (diária, semanal, quinzenal, mensal) com **dias da semana** à escolha e término por **quantidade de sessões, data ou mês**. Gera todos os agendamentos e o financeiro (por sessão, pacote único ou parcelado). Lançamentos de **retorno** têm tipo próprio. Pode ser **editado** depois. |
 | **Agenda** | Visões dia/semana/mês; filtros por profissional e paciente; confirmar, marcar realizado/faltou, cancelar e reagendar. |
 | **Financeiro** | Contas a receber e a pagar (com parcelamento e baixa), extrato por conta com saldo corrido e fluxo de caixa (realizado × previsto). |
-| **Estoque** | Itens, saldo mínimo, entradas/saídas/ajustes; compra pode gerar conta a pagar. |
-| **Usuários** | Administradores criam e editam usuários (perfis *Administrador* e *Atendimento*). Cada usuário altera a própria senha em *Minha conta*. |
+| **Estoque** | Itens, saldo mínimo, entradas/saídas/ajustes; compra pode gerar conta a pagar. **Desligado por padrão**: só aparece se o fornecedor liberar o módulo. |
+| **Usuários e perfis de acesso** | O *Administrador da empresa* tem acesso total aos módulos liberados e gerencia usuários. Os demais usuários seguem um **perfil de acesso**, que define por módulo: sem acesso, *Consulta* (só vê) ou *Edita*. Cada usuário altera a própria senha em *Minha conta*. |
+
+### Console do fornecedor (domínio de administração)
+
+O mesmo sistema atende dois domínios. Em um domínio configurado em `PLATFORM_ADMIN_HOSTS`
+(ex.: `admin.bosque.tipmp.com.br`) abre-se o **console do fornecedor**, com login próprio e separado
+dos usuários da clínica:
+
+- **Bloquear / liberar o sistema** (ex.: falta de pagamento), com mensagem exibida à clínica. O bloqueio vale em
+  poucos segundos para quem já está logado.
+- **Módulos liberados**: o fornecedor escolhe quais módulos aparecem. O que ele desliga some para todos, inclusive
+  para o administrador da empresa (os dados são mantidos). O administrador da empresa distribui, entre os módulos
+  liberados, o acesso de cada perfil.
+- Histórico de bloqueios, liberações e mudanças de módulos.
+
+O console não existe no domínio da clínica (retorna 404 lá) e as sessões de um domínio não valem no outro.
 
 ### Regras importantes
 
@@ -55,6 +70,8 @@ Scripts úteis: `npm run lint` (checagem de tipos), `npm run build`, `npm run db
 | `DATABASE_URL` | String de conexão do PostgreSQL. |
 | `AUTH_SECRET` | Segredo da sessão (mín. 32 caracteres). Gere com `openssl rand -base64 48`. |
 | `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Administrador inicial (usado só quando não há usuários). |
+| `PLATFORM_ADMIN_HOSTS` | Domínio(s) do console do fornecedor, separados por vírgula (ex.: `admin.bosque.tipmp.com.br`). Vazio = console desativado. |
+| `PLATFORM_ADMIN_EMAIL`, `PLATFORM_ADMIN_PASSWORD`, `PLATFORM_ADMIN_NAME` | Conta do fornecedor, criada no primeiro start (só se ainda não existir nenhuma). Troque a senha em *Minha conta* do console. |
 | `TZ` | Fuso horário do servidor (`America/Sao_Paulo`). |
 
 ## Deploy no Easypanel
@@ -72,6 +89,8 @@ Scripts úteis: `npm run lint` (checagem de tipos), `npm run build`, `npm run db
    TZ=America/Sao_Paulo
    ```
 4. **Domínio/HTTPS:** adicione o domínio na aba *Domains* do serviço (o Easypanel emite o certificado).
+   Para o **console do fornecedor**, adicione um segundo domínio (ex.: `admin.bosque.tipmp.com.br`) apontando para
+   **o mesmo serviço** e liste-o em `PLATFORM_ADMIN_HOSTS`, junto das variáveis `PLATFORM_ADMIN_*`.
 5. **Deploy.** A cada start o container aplica as migrations pendentes (`prisma migrate deploy`) antes de subir o servidor.
    O endpoint `GET /api/health` serve para o health check.
 6. **Backups:** habilite os backups do serviço Postgres no Easypanel (ou agende `pg_dump`). Os dados clínicos
@@ -93,7 +112,7 @@ src/proxy.ts       barreira de acesso (redireciona para /login sem sessão)
 
 ## Próximos passos sugeridos
 
-- Permissões por perfil (hoje o perfil Atendimento só não acessa *Usuários*).
+- Bloqueio automático por data de vencimento da mensalidade (hoje o bloqueio é manual, no console).
 - Venda de produtos nos lançamentos (os preços de produtos já ficam na tabela de preços).
 - Relatórios (produção por profissional, inadimplência) e exportação CSV.
 - Lembretes de consulta por WhatsApp/e-mail e portal do paciente.

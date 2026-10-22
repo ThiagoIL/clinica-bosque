@@ -27,7 +27,7 @@ export async function saveStockItem(_: FormState, formData: FormData): Promise<F
   if (parsed.state) return parsed.state;
   const { id, cost, initialQuantity, ...rest } = parsed.data;
 
-  return runAction(formData, async () => {
+  return runAction("ESTOQUE", formData, async () => {
     if (id) {
       await db.stockItem.update({ where: { id }, data: { ...rest, costCents: cost ?? 0 } });
     } else {
@@ -70,7 +70,7 @@ export async function registerMovement(_: FormState, formData: FormData): Promis
   if (parsed.state) return parsed.state;
   const d = parsed.data;
 
-  return runAction(formData, async () => {
+  return runAction("ESTOQUE", formData, async () => {
     if (d.type !== "ADJUSTMENT" && d.quantity <= 0) {
       throw new UserError("A quantidade deve ser maior que zero.", { quantity: "Informe uma quantidade maior que zero" });
     }

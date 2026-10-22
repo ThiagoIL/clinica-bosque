@@ -23,7 +23,7 @@ export const repeatEndLabels: Record<RepeatEnd, string> = {
   UNTIL_MONTH: "Até um mês",
 };
 
-export const userRoleLabels: Record<UserRole, string> = { ADMIN: "Administrador", STAFF: "Atendimento" };
+export const userRoleLabels: Record<UserRole, string> = { ADMIN: "Administrador da empresa", STAFF: "Usuário" };
 
 export const WEEKDAY_OPTIONS = [
   { value: 1, label: "Seg" }, { value: 2, label: "Ter" }, { value: 3, label: "Qua" }, { value: 4, label: "Qui" },

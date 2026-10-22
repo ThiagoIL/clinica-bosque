@@ -1,6 +1,7 @@
 import Link from "next/link";
 import clsx from "clsx";
 import { db } from "@/lib/db";
+import { loadSnapshot } from "@/lib/access";
 import { centsToInput } from "@/lib/money";
 import { serviceKindLabels } from "@/lib/labels";
 import {
@@ -20,11 +21,12 @@ export default async function PriceTablePage({
   const plans = await db.healthPlan.findMany({ where: { active: true }, orderBy: [{ isDefault: "desc" }, { name: "asc" }] });
   const plan = plans.find((p) => p.id === param(sp.plan)) ?? plans[0];
 
+  const stockEnabled = (await loadSnapshot(null)).enabled.includes("ESTOQUE");
   const [services, products, servicePrices, productPrices] = await Promise.all([
     db.service.findMany({ where: { active: true }, orderBy: [{ kind: "asc" }, { name: "asc" }] }),
-    db.stockItem.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
+    stockEnabled ? db.stockItem.findMany({ where: { active: true }, orderBy: { name: "asc" } }) : [],
     db.servicePrice.findMany({ where: { healthPlanId: plan.id } }),
-    db.productPrice.findMany({ where: { healthPlanId: plan.id } }),
+    stockEnabled ? db.productPrice.findMany({ where: { healthPlanId: plan.id } }) : [],
   ]);
   // muda quando os preços são salvos/copiados, para o formulário refletir os valores atuais
   const version = Math.max(0, ...servicePrices.map((p) => p.updatedAt.getTime()), ...productPrices.map((p) => p.updatedAt.getTime()));
@@ -35,7 +37,7 @@ export default async function PriceTablePage({
     <>
       <PageHeader
         title="Tabela de preços"
-        description="Valor de cada serviço e produto por plano de saúde. O valor é sugerido automaticamente ao lançar um atendimento."
+        description={`Valor de cada serviço${stockEnabled ? " e produto" : ""} por plano de saúde. O valor é sugerido automaticamente ao lançar um atendimento.`}
         actions={<LinkButton href="/planos" variant="outline">Gerenciar planos</LinkButton>}
       />
 
@@ -80,6 +82,7 @@ export default async function PriceTablePage({
             )}
           </Card>
 
+          {stockEnabled && (
           <Card title={`Produtos — ${plan.name}`} description="Itens do estoque com preço de venda" padded={false}>
             {products.length === 0 ? (
               <p className="p-5 text-sm text-muted">Nenhum item de estoque cadastrado.</p>
@@ -100,6 +103,7 @@ export default async function PriceTablePage({
               </table>
             )}
           </Card>
+          )}
         </div>
         <FormActions>
           <SubmitButton>Salvar tabela de {plan.name}</SubmitButton>

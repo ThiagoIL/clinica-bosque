@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { runAction } from "@/lib/action";
-import { UserError, checkbox, parseForm, required, requiredEnum, type FormState } from "@/lib/form";
+import { UserError, checkbox, optionalId, parseForm, required, requiredEnum, type FormState } from "@/lib/form";
 
 const MIN_PASSWORD = 8;
 
@@ -16,7 +16,8 @@ const userSchema = z.object({
     .trim()
     .toLowerCase()
     .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "E-mail inválido"),
-  role: requiredEnum(["ADMIN", "STAFF"], "Perfil"),
+  role: requiredEnum(["ADMIN", "STAFF"], "Nível"),
+  accessProfileId: optionalId(),
   password: z.string().optional(),
   active: checkbox(),
 });
@@ -24,9 +25,11 @@ const userSchema = z.object({
 export async function saveUser(_: FormState, formData: FormData): Promise<FormState> {
   const parsed = parseForm(userSchema, formData);
   if (parsed.state) return parsed.state;
-  const { id, password, ...data } = parsed.data;
+  const { id, password, accessProfileId, ...rest } = parsed.data;
+  // administradores têm acesso total; o perfil de acesso só vale para o nível "Usuário"
+  const data = { ...rest, accessProfileId: rest.role === "STAFF" ? accessProfileId : null };
 
-  return runAction(formData, async (current) => {
+  return runAction("ADMIN", formData, async (current) => {
     if (current.role !== "ADMIN") throw new UserError("Somente administradores podem gerenciar usuários.");
 
     if (password) {
@@ -35,6 +38,10 @@ export async function saveUser(_: FormState, formData: FormData): Promise<FormSt
       }
     } else if (!id) {
       throw new UserError("Defina uma senha para o novo usuário.", { password: "Senha é obrigatória" });
+    }
+
+    if (data.accessProfileId && !(await db.accessProfile.findUnique({ where: { id: data.accessProfileId } }))) {
+      throw new UserError("Perfil de acesso não encontrado.", { accessProfileId: "Perfil inválido" });
     }
 
     const sameEmail = await db.user.findUnique({ where: { email: data.email } });

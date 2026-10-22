@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { createSession, destroySession } from "@/lib/auth";
+import { loadSnapshot } from "@/lib/access";
 import { parseForm, formValues, type FormState } from "@/lib/form";
 
 // Limitador simples em memória (instância única): 5 falhas / 15 min por e-mail + IP.
@@ -24,6 +25,7 @@ const schema = z.object({
 });
 
 export async function login(_: FormState, formData: FormData): Promise<FormState> {
+  if ((await loadSnapshot(null)).blocked) redirect("/bloqueado");
   const parsed = parseForm(schema, formData);
   if (parsed.state) return { ...parsed.state, values: { email: formValues(formData).email ?? "" } };
   const { email, password, next } = parsed.data;
@@ -47,6 +49,7 @@ export async function login(_: FormState, formData: FormData): Promise<FormState
   }
 
   attempts.delete(key);
+  await db.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
   await createSession(user.id);
   redirect(next && next.startsWith("/") && !next.startsWith("//") ? next : "/");
 }

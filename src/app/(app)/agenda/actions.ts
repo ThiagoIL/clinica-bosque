@@ -18,7 +18,7 @@ export async function setAppointmentStatus(_: FormState, formData: FormData): Pr
   if (parsed.state) return parsed.state;
   const { id, status, reason } = parsed.data;
 
-  return runAction(formData, async () => {
+  return runAction(["AGENDA", "LANCAMENTOS"], formData, async () => {
     await db.$transaction(async (tx) => {
       const appointment = await tx.appointment.findUnique({
         where: { id },
@@ -74,7 +74,7 @@ export async function rescheduleAppointment(_: FormState, formData: FormData): P
   if (parsed.state) return parsed.state;
   const { id, date, time } = parsed.data;
 
-  return runAction(formData, async () => {
+  return runAction(["AGENDA", "LANCAMENTOS"], formData, async () => {
     await db.$transaction(async (tx) => {
       const appointment = await tx.appointment.findUnique({
         where: { id },

@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { SignJWT, jwtVerify } from "jose";
 import { db } from "@/lib/db";
+import { loadSnapshot } from "@/lib/access";
 
 export const SESSION_COOKIE = "bosque_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 12; // 12 horas
@@ -44,6 +45,8 @@ export const getCurrentUser = cache(async () => {
   try {
     const { payload } = await jwtVerify(token, secret());
     if (!payload.sub) return null;
+    // sessões do console do fornecedor (aud "platform") nunca valem para a clínica
+    if (payload.aud === "platform") return null;
     const user = await db.user.findUnique({
       where: { id: payload.sub },
       select: { id: true, name: true, email: true, role: true, active: true },
@@ -54,11 +57,20 @@ export const getCurrentUser = cache(async () => {
   }
 });
 
+/** Usuário logado; sem sessão vai para o login e, com o sistema bloqueado, para a tela de bloqueio. */
 export async function requireUser() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  const snapshot = await loadSnapshot(user.id);
+  if (snapshot.blocked) redirect("/bloqueado");
   return user;
 }
+
+/** Estado de acesso do usuário logado (módulos liberados e permissões). Cacheado por requisição. */
+export const getAccess = cache(async () => {
+  const user = await requireUser();
+  return loadSnapshot(user.id);
+});
 
 /** Somente administradores; os demais voltam ao início. */
 export async function requireAdmin() {

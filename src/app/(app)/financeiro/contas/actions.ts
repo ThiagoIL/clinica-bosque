@@ -22,7 +22,7 @@ export async function saveAccount(_: FormState, formData: FormData): Promise<For
   if (cents === null) {
     return { error: "Verifique os campos destacados.", fieldErrors: { initialBalance: "Saldo inicial inválido" }, values: Object.fromEntries(formData) as Record<string, string> };
   }
-  return runAction(formData, async () => {
+  return runAction("FINANCEIRO", formData, async () => {
     const data = { ...rest, initialBalanceCents: cents };
     if (id) await db.financialAccount.update({ where: { id }, data });
     else await db.financialAccount.create({ data });
@@ -41,7 +41,7 @@ export async function saveCategory(_: FormState, formData: FormData): Promise<Fo
   const parsed = parseForm(categorySchema, formData);
   if (parsed.state) return parsed.state;
   const { id, ...data } = parsed.data;
-  return runAction(formData, async () => {
+  return runAction("FINANCEIRO", formData, async () => {
     if (id) await db.financialCategory.update({ where: { id }, data });
     else await db.financialCategory.create({ data });
     return { redirectTo: "/financeiro/contas" };

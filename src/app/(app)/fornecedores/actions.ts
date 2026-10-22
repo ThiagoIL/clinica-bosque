@@ -19,7 +19,7 @@ export async function saveSupplier(_: FormState, formData: FormData): Promise<Fo
   const parsed = parseForm(schema, formData);
   if (parsed.state) return parsed.state;
   const { id, ...data } = parsed.data;
-  return runAction(formData, async () => {
+  return runAction("CADASTROS", formData, async () => {
     if (id) await db.supplier.update({ where: { id }, data });
     else await db.supplier.create({ data });
     return { redirectTo: "/fornecedores" };

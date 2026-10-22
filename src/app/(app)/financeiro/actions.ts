@@ -35,7 +35,7 @@ export async function createEntry(_: FormState, formData: FormData): Promise<For
   const d = parsed.data;
   const path = d.kind === "INCOME" ? "receber" : "pagar";
 
-  return runAction(formData, async () => {
+  return runAction("FINANCEIRO", formData, async () => {
     if (d.paidNow) {
       if (d.installments > 1) throw new UserError("Lançamento já pago não pode ser parcelado.");
       if (!d.accountId) throw new UserError("Selecione a conta onde o pagamento foi realizado.", { accountId: "Selecione a conta" });
@@ -85,7 +85,7 @@ export async function updateEntry(_: FormState, formData: FormData): Promise<For
   const parsed = parseForm(updateSchema, formData);
   if (parsed.state) return parsed.state;
   const d = parsed.data;
-  return runAction(formData, async () => {
+  return runAction("FINANCEIRO", formData, async () => {
     const entry = await db.financialEntry.findUnique({ where: { id: d.id } });
     if (!entry) throw new UserError("Lançamento não encontrado.");
     if (entry.status !== "PENDING") throw new UserError("Somente lançamentos em aberto podem ser editados. Reabra o lançamento primeiro.");
@@ -117,7 +117,7 @@ export async function settleEntry(_: FormState, formData: FormData): Promise<For
   const parsed = parseForm(settleSchema, formData);
   if (parsed.state) return parsed.state;
   const d = parsed.data;
-  return runAction(formData, async () => {
+  return runAction("FINANCEIRO", formData, async () => {
     const entry = await db.financialEntry.findUnique({ where: { id: d.id } });
     if (!entry) throw new UserError("Lançamento não encontrado.");
     if (entry.status !== "PENDING") throw new UserError("Este lançamento não está em aberto.");
@@ -140,7 +140,7 @@ const idSchema = z.object({ id: selectId("o lançamento") });
 export async function reopenEntry(_: FormState, formData: FormData): Promise<FormState> {
   const parsed = parseForm(idSchema, formData);
   if (parsed.state) return parsed.state;
-  return runAction(formData, async () => {
+  return runAction("FINANCEIRO", formData, async () => {
     await db.financialEntry.update({
       where: { id: parsed.data.id },
       data: { status: "PENDING", paidOn: null, paidAmountCents: null, accountId: null, paymentMethod: null },
@@ -152,7 +152,7 @@ export async function reopenEntry(_: FormState, formData: FormData): Promise<For
 export async function cancelEntry(_: FormState, formData: FormData): Promise<FormState> {
   const parsed = parseForm(idSchema, formData);
   if (parsed.state) return parsed.state;
-  return runAction(formData, async () => {
+  return runAction("FINANCEIRO", formData, async () => {
     const entry = await db.financialEntry.findUnique({ where: { id: parsed.data.id } });
     if (!entry) throw new UserError("Lançamento não encontrado.");
     if (entry.status === "PAID") throw new UserError("Reabra o lançamento antes de cancelar.");

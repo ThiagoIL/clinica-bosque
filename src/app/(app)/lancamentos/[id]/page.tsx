@@ -9,6 +9,8 @@ import { ActionForm, ConfirmSubmit } from "@/components/ui/form-kit";
 import { Badge, Card, LinkButton, PageHeader } from "@/components/ui/primitives";
 import { AppointmentActions } from "@/components/appointment-actions";
 import { cancelEngagement } from "../actions";
+import { getAccess } from "@/lib/auth";
+import { levelOf } from "@/lib/access";
 
 export const metadata = { title: "Lançamento" };
 
@@ -27,6 +29,7 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
   });
   if (!engagement) notFound();
 
+  const canFinance = levelOf(await getAccess(), "FINANCEIRO") !== "NONE";
   const paid = engagement.entries.filter((e) => e.status === "PAID").reduce((s, e) => s + (e.paidAmountCents ?? 0), 0);
   const open = engagement.entries.filter((e) => e.status === "PENDING").reduce((s, e) => s + e.amountCents, 0);
 
@@ -79,6 +82,7 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
           {engagement.notes && <p className="mt-4 whitespace-pre-wrap text-sm text-muted">{engagement.notes}</p>}
         </Card>
 
+        {canFinance && (
         <Card title="Financeiro">
           <div className="mb-3 grid grid-cols-2 gap-3 text-sm">
             <Info label="Recebido"><span className="font-semibold text-brand-700">{formatMoney(paid)}</span></Info>
@@ -103,6 +107,7 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
             {engagement.entries.length === 0 && <li className="py-2 text-muted">Sem cobranças geradas.</li>}
           </ul>
         </Card>
+        )}
       </div>
 
       <Card title="Atendimentos" padded={false}>

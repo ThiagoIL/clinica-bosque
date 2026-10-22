@@ -8,7 +8,13 @@ import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import clsx from "clsx";
 import type { FormState } from "@/lib/form";
 
-const FormCtx = createContext<{ state: FormState; pending: boolean }>({ state: {}, pending: false });
+const FormCtx = createContext<{ state: FormState; pending: boolean; readOnly: boolean }>({ state: {}, pending: false, readOnly: false });
+
+/** Quando verdadeiro (perfil só de consulta), todos os formulários abaixo ficam desabilitados. */
+const ReadOnlyCtx = createContext(false);
+export function ReadOnlyProvider({ readOnly, children }: { readOnly: boolean; children: ReactNode }) {
+  return <ReadOnlyCtx.Provider value={readOnly}>{children}</ReadOnlyCtx.Provider>;
+}
 
 type Action = (state: FormState, formData: FormData) => Promise<FormState>;
 
@@ -32,6 +38,7 @@ export function ActionForm({
 }) {
   const [state, formAction, pending] = useActionState(action, {} as FormState);
   const formRef = useRef<HTMLFormElement>(null);
+  const readOnly = useContext(ReadOnlyCtx);
 
   useEffect(() => {
     if (resetOnSuccess && state.success && !state.error) formRef.current?.reset();
@@ -45,7 +52,7 @@ export function ActionForm({
   }
 
   return (
-    <FormCtx.Provider value={{ state, pending }}>
+    <FormCtx.Provider value={{ state, pending, readOnly }}>
       <form ref={formRef} onSubmit={onSubmit} className={className}>
         {!hideMessages && state.error && (
           <div role="alert" className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-800">
@@ -84,13 +91,13 @@ type ButtonProps = {
 };
 
 export function SubmitButton({ children = "Salvar", className, variant = "primary", size, name, value }: ButtonProps) {
-  const { pending } = useContext(FormCtx);
+  const { pending, readOnly } = useContext(FormCtx);
   return (
     <button
       type="submit"
       name={name}
       value={value}
-      disabled={pending}
+      disabled={pending || readOnly}
       className={clsx("btn", `btn-${variant}`, size === "sm" && "btn-sm", className)}
     >
       {pending && <Loader2 className="size-4 animate-spin" />}
@@ -109,13 +116,13 @@ export function ConfirmSubmit({
   name,
   value,
 }: ButtonProps & { message: string; children: ReactNode }) {
-  const { pending } = useContext(FormCtx);
+  const { pending, readOnly } = useContext(FormCtx);
   return (
     <button
       type="submit"
       name={name}
       value={value}
-      disabled={pending}
+      disabled={pending || readOnly}
       onClick={(e) => {
         if (!window.confirm(message)) e.preventDefault();
       }}
@@ -142,6 +149,10 @@ function spanClass(span?: Span) {
 
 function useFieldError(name: string) {
   return useContext(FormCtx).state.fieldErrors?.[name];
+}
+
+function useReadOnly() {
+  return useContext(FormCtx).readOnly;
 }
 
 function FieldShell({
@@ -199,6 +210,7 @@ export function TextField({
   autoComplete?: string;
 }) {
   const error = useFieldError(name);
+  const ro = useReadOnly();
   return (
     <FieldShell label={label} name={name} error={error} hint={hint} required={required} span={span}>
       <input
@@ -215,7 +227,7 @@ export function TextField({
         max={max}
         step={step}
         autoComplete={autoComplete}
-        disabled={disabled}
+        disabled={disabled || ro}
         aria-invalid={error ? true : undefined}
         className="input"
       />
@@ -239,6 +251,7 @@ export function MaskedField({
   name, label, required, hint, span, disabled, defaultValue, mask,
 }: BaseProps & { defaultValue?: string | null; mask: keyof typeof MASKS }) {
   const error = useFieldError(name);
+  const ro = useReadOnly();
   const [text, setText] = useState(() => MASKS[mask](defaultValue ?? ""));
   return (
     <FieldShell label={label} name={name} error={error} hint={hint} required={required} span={span}>
@@ -248,7 +261,7 @@ export function MaskedField({
         value={text}
         onChange={(e) => setText(MASKS[mask](e.target.value))}
         inputMode="numeric"
-        disabled={disabled}
+        disabled={disabled || ro}
         aria-invalid={error ? true : undefined}
         className="input"
       />
@@ -269,6 +282,7 @@ export function SelectField({
   allowEmpty?: boolean;
 }) {
   const error = useFieldError(name);
+  const ro = useReadOnly();
   return (
     <FieldShell label={label} name={name} error={error} hint={hint} required={required} span={span}>
       <select
@@ -277,7 +291,7 @@ export function SelectField({
         {...(value !== undefined
           ? { value, onChange: (e: ChangeEvent<HTMLSelectElement>) => onChange?.(e.target.value) }
           : { defaultValue: defaultValue ?? "" })}
-        disabled={disabled}
+        disabled={disabled || ro}
         aria-invalid={error ? true : undefined}
         className="input"
       >
@@ -296,6 +310,7 @@ export function TextareaField({
   name, label, required, hint, span = 4, disabled, defaultValue, rows = 3,
 }: BaseProps & { defaultValue?: string | null; rows?: number }) {
   const error = useFieldError(name);
+  const ro = useReadOnly();
   return (
     <FieldShell label={label} name={name} error={error} hint={hint} required={required} span={span}>
       <textarea
@@ -303,7 +318,7 @@ export function TextareaField({
         name={name}
         rows={rows}
         defaultValue={defaultValue ?? ""}
-        disabled={disabled}
+        disabled={disabled || ro}
         aria-invalid={error ? true : undefined}
         className="input resize-y"
       />
@@ -329,6 +344,7 @@ const PALETTE = [
 /** Seletor de cor com paleta pronta (um clique) e opção de cor personalizada. */
 export function ColorField({ name, label, defaultValue = PALETTE[0].value, span }: { name: string; label: string; defaultValue?: string; span?: Span }) {
   const [color, setColor] = useState(defaultValue);
+  const ro = useReadOnly();
   const inPalette = PALETTE.some((c) => c.value.toLowerCase() === color.toLowerCase());
   return (
     <div className={spanClass(span)}>
@@ -344,6 +360,7 @@ export function ColorField({ name, label, defaultValue = PALETTE[0].value, span 
               role="radio"
               aria-checked={selected}
               aria-label={c.name}
+              disabled={ro}
               title={c.name}
               onClick={() => setColor(c.value)}
               className={clsx(
@@ -379,6 +396,7 @@ export function ColorField({ name, label, defaultValue = PALETTE[0].value, span 
 /** Campo de valor sem rótulo, para células de tabela (ex.: tabela de preços). */
 export function PriceInput({ name, defaultValue, placeholder = "—" }: { name: string; defaultValue?: string; placeholder?: string }) {
   const error = useFieldError(name);
+  const ro = useReadOnly();
   return (
     <input
       name={name}
@@ -386,6 +404,7 @@ export function PriceInput({ name, defaultValue, placeholder = "—" }: { name: 
       placeholder={placeholder}
       inputMode="decimal"
       aria-label="Preço"
+      disabled={ro}
       aria-invalid={error ? true : undefined}
       className="input w-32 text-right tabular-nums"
     />
@@ -395,12 +414,14 @@ export function PriceInput({ name, defaultValue, placeholder = "—" }: { name: 
 export function CheckboxField({
   name, label, defaultChecked, hint, span,
 }: { name: string; label: string; defaultChecked?: boolean; hint?: string; span?: Span }) {
+  const ro = useReadOnly();
   return (
     <div className={clsx("flex items-start gap-2 self-end pb-2", spanClass(span))}>
       <input
         id={name}
         name={name}
         type="checkbox"
+        disabled={ro}
         defaultChecked={!!defaultChecked}
         className="mt-0.5 size-4 rounded border-line accent-brand-600"
       />

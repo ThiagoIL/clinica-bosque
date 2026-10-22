@@ -37,7 +37,7 @@ export async function savePriceTable(_: FormState, formData: FormData): Promise<
     return { error: "Há valores inválidos na tabela.", fieldErrors, values: Object.fromEntries(formData) as Record<string, string> };
   }
 
-  return runAction(formData, async () => {
+  return runAction("CADASTROS", formData, async () => {
     const plan = await db.healthPlan.findUnique({ where: { id: planId } });
     if (!plan) throw new UserError("Plano não encontrado.");
 
@@ -79,7 +79,7 @@ export async function copyPriceTable(_: FormState, formData: FormData): Promise<
   if (parsed.state) return parsed.state;
   const { planId, sourceId, percent, overwrite } = parsed.data;
 
-  return runAction(formData, async () => {
+  return runAction("CADASTROS", formData, async () => {
     if (planId === sourceId) throw new UserError("Escolha um plano de origem diferente do destino.");
     const factor = 1 + percent / 100;
     const [servicePrices, productPrices, targetServices, targetProducts] = await Promise.all([

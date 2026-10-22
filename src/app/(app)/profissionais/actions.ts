@@ -23,7 +23,7 @@ export async function saveProfessional(_: FormState, formData: FormData): Promis
   const parsed = parseForm(schema, formData);
   if (parsed.state) return parsed.state;
   const { id, ...data } = parsed.data;
-  return runAction(formData, async () => {
+  return runAction("PROFISSIONAIS", formData, async () => {
     if (id) await db.professional.update({ where: { id }, data });
     else await db.professional.create({ data });
     return { redirectTo: "/profissionais" };

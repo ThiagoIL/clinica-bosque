@@ -17,7 +17,7 @@ export async function saveHealthPlan(_: FormState, formData: FormData): Promise<
   if (parsed.state) return parsed.state;
   const { id, name, notes, active } = parsed.data;
 
-  return runAction(formData, async () => {
+  return runAction("CADASTROS", formData, async () => {
     const sameName = await db.healthPlan.findFirst({
       where: { name: { equals: name, mode: "insensitive" }, ...(id ? { id: { not: id } } : {}) },
     });

@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import { DEFAULT_ENABLED_MODULES } from "@/lib/modules";
 
 const DEFAULT_CATEGORIES = [
   { name: "Atendimentos", kind: "INCOME" },
@@ -35,6 +36,31 @@ export async function bootstrap() {
       console.log(`[bootstrap] administrador criado: ${email}`);
     } else {
       console.warn("[bootstrap] nenhum usuário existe e ADMIN_EMAIL/ADMIN_PASSWORD não foram definidos");
+    }
+  }
+
+  // Configuração única do sistema (módulos liberados / bloqueio), controlada pelo console do fornecedor.
+  await db.systemSettings.upsert({
+    where: { id: "singleton" },
+    update: {},
+    create: { id: "singleton", enabledModules: DEFAULT_ENABLED_MODULES },
+  });
+
+  // Conta do fornecedor (console no domínio de administração), criada a partir do ambiente.
+  const platformEmail = process.env.PLATFORM_ADMIN_EMAIL?.trim().toLowerCase();
+  const platformPassword = process.env.PLATFORM_ADMIN_PASSWORD;
+  if ((await db.platformAdmin.count()) === 0) {
+    if (platformEmail && platformPassword) {
+      await db.platformAdmin.create({
+        data: {
+          name: process.env.PLATFORM_ADMIN_NAME?.trim() || "Fornecedor",
+          email: platformEmail,
+          passwordHash: await bcrypt.hash(platformPassword, 12),
+        },
+      });
+      console.log(`[bootstrap] administrador do sistema criado: ${platformEmail}`);
+    } else {
+      console.warn("[bootstrap] sem conta de fornecedor: defina PLATFORM_ADMIN_EMAIL e PLATFORM_ADMIN_PASSWORD");
     }
   }
 

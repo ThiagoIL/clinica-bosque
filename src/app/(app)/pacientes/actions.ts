@@ -70,7 +70,7 @@ export async function savePatient(_: FormState, formData: FormData): Promise<For
   if (parsed.state) return parsed.state;
   const { id, birthDate, active, healthPlanId, ...rest } = parsed.data;
 
-  return runAction(formData, async () => {
+  return runAction("PACIENTES", formData, async () => {
     // sem plano informado, o paciente é Particular
     const planId = healthPlanId ?? (await db.healthPlan.findFirst({ where: { isDefault: true } }))?.id ?? null;
     const data = { ...rest, healthPlanId: planId, birthDate: birthDate ? dateOnly(birthDate) : null };
@@ -91,7 +91,7 @@ const noteSchema = z.object({
 export async function addPatientNote(_: FormState, formData: FormData): Promise<FormState> {
   const parsed = parseForm(noteSchema, formData);
   if (parsed.state) return parsed.state;
-  return runAction(formData, async (user) => {
+  return runAction("PACIENTES", formData, async (user) => {
     await db.patientNote.create({
       data: { patientId: parsed.data.patientId, content: parsed.data.content, authorId: user.id },
     });
@@ -104,7 +104,7 @@ const idSchema = z.object({ id: z.string().min(1) });
 export async function deletePatientNote(_: FormState, formData: FormData): Promise<FormState> {
   const parsed = parseForm(idSchema, formData);
   if (parsed.state) return parsed.state;
-  return runAction(formData, async () => {
+  return runAction("PACIENTES", formData, async () => {
     await db.patientNote.delete({ where: { id: parsed.data.id } });
     return {};
   });
@@ -113,7 +113,7 @@ export async function deletePatientNote(_: FormState, formData: FormData): Promi
 export async function deletePatient(_: FormState, formData: FormData): Promise<FormState> {
   const parsed = parseForm(idSchema, formData);
   if (parsed.state) return parsed.state;
-  return runAction(formData, async () => {
+  return runAction("PACIENTES", formData, async () => {
     const id = parsed.data.id;
     const [appointments, engagements, entries] = await Promise.all([
       db.appointment.count({ where: { patientId: id } }),

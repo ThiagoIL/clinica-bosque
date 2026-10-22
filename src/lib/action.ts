@@ -2,6 +2,8 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
+import { hasAccess, loadSnapshot } from "@/lib/access";
+import type { Access } from "@/lib/modules";
 import { UserError, formValues, type FormState } from "@/lib/form";
 
 type Outcome = FormState | { redirectTo: string } | void;
@@ -38,6 +40,7 @@ function friendlyDatabaseError(error: unknown): string | null {
  * e redirecionamento opcional (feito fora do try/catch, pois redirect() lança).
  */
 export async function runAction(
+  access: Access | Access[] | null,
   formData: FormData,
   fn: (user: Awaited<ReturnType<typeof requireUser>>) => Promise<Outcome>,
 ): Promise<FormState> {
@@ -45,6 +48,18 @@ export async function runAction(
   const values = formValues(formData);
   let outcome: Outcome;
   try {
+    if (access) {
+      // qualquer um dos módulos informados com nível "Edita" (ou administrador, quando "ADMIN")
+      const snapshot = await loadSnapshot(user.id);
+      const needed = Array.isArray(access) ? access : [access];
+      if (!needed.some((a) => hasAccess(snapshot, a, "EDIT"))) {
+        throw new UserError(
+          needed.includes("ADMIN") && needed.length === 1
+            ? "Somente o administrador da empresa pode fazer isto."
+            : "Seu perfil de acesso não permite alterar este módulo.",
+        );
+      }
+    }
     outcome = await fn(user);
   } catch (error) {
     if (error instanceof UserError) return { error: error.message, fieldErrors: error.fieldErrors, values };

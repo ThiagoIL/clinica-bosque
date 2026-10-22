@@ -6,61 +6,82 @@ import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import {
   ArrowDownCircle, ArrowUpCircle, Boxes, CalendarDays, ClipboardList, Landmark, LayoutDashboard,
-  HeartPulse, LineChart, Menu, Package, ReceiptText, Stethoscope, Tags, Truck, UserCog, Users, Wallet, X,
+  HeartPulse, LineChart, Menu, Package, ReceiptText, ShieldCheck, Stethoscope, Tags, Truck, UserCog, Users, Wallet, X,
+  type LucideIcon,
 } from "lucide-react";
+import { ReadOnlyProvider } from "@/components/ui/form-kit";
+import { moduleForPath, type Access, type Level, type ModuleKey } from "@/lib/modules";
 
-const NAV = [
-  {
-    items: [{ href: "/", label: "Início", icon: LayoutDashboard }],
-  },
+type NavItem = { href: string; label: string; icon: LucideIcon; access?: Access };
+type NavGroup = { title?: string; items: NavItem[] };
+
+const NAV: NavGroup[] = [
+  { items: [{ href: "/", label: "Início", icon: LayoutDashboard }] },
   {
     title: "Atendimento",
     items: [
-      { href: "/agenda", label: "Agenda", icon: CalendarDays },
-      { href: "/lancamentos", label: "Lançamentos", icon: ClipboardList },
-      { href: "/pacientes", label: "Pacientes", icon: Users },
-      { href: "/profissionais", label: "Profissionais", icon: Stethoscope },
+      { href: "/agenda", label: "Agenda", icon: CalendarDays, access: "AGENDA" },
+      { href: "/lancamentos", label: "Lançamentos", icon: ClipboardList, access: "LANCAMENTOS" },
+      { href: "/pacientes", label: "Pacientes", icon: Users, access: "PACIENTES" },
+      { href: "/profissionais", label: "Profissionais", icon: Stethoscope, access: "PROFISSIONAIS" },
     ],
   },
   {
     title: "Financeiro",
     items: [
-      { href: "/financeiro/receber", label: "Contas a receber", icon: ArrowDownCircle },
-      { href: "/financeiro/pagar", label: "Contas a pagar", icon: ArrowUpCircle },
-      { href: "/financeiro/extrato", label: "Extrato", icon: Wallet },
-      { href: "/financeiro/fluxo", label: "Fluxo de caixa", icon: LineChart },
+      { href: "/financeiro/receber", label: "Contas a receber", icon: ArrowDownCircle, access: "FINANCEIRO" },
+      { href: "/financeiro/pagar", label: "Contas a pagar", icon: ArrowUpCircle, access: "FINANCEIRO" },
+      { href: "/financeiro/extrato", label: "Extrato", icon: Wallet, access: "FINANCEIRO" },
+      { href: "/financeiro/fluxo", label: "Fluxo de caixa", icon: LineChart, access: "FINANCEIRO" },
     ],
   },
   {
     title: "Estoque",
     items: [
-      { href: "/estoque", label: "Itens e saldo", icon: Package },
-      { href: "/estoque/movimentacoes", label: "Movimentações", icon: Boxes },
+      { href: "/estoque", label: "Itens e saldo", icon: Package, access: "ESTOQUE" },
+      { href: "/estoque/movimentacoes", label: "Movimentações", icon: Boxes, access: "ESTOQUE" },
     ],
   },
   {
     title: "Cadastros",
     items: [
-      { href: "/servicos", label: "Serviços", icon: Tags },
-      { href: "/planos", label: "Planos de saúde", icon: HeartPulse },
-      { href: "/precos", label: "Tabela de preços", icon: ReceiptText },
-      { href: "/fornecedores", label: "Fornecedores", icon: Truck },
-      { href: "/financeiro/contas", label: "Contas e categorias", icon: Landmark },
-      { href: "/usuarios", label: "Usuários", icon: UserCog, adminOnly: true },
+      { href: "/servicos", label: "Serviços", icon: Tags, access: "CADASTROS" },
+      { href: "/planos", label: "Planos de saúde", icon: HeartPulse, access: "CADASTROS" },
+      { href: "/precos", label: "Tabela de preços", icon: ReceiptText, access: "CADASTROS" },
+      { href: "/fornecedores", label: "Fornecedores", icon: Truck, access: "CADASTROS" },
+      { href: "/financeiro/contas", label: "Contas e categorias", icon: Landmark, access: "FINANCEIRO" },
+    ],
+  },
+  {
+    title: "Administração",
+    items: [
+      { href: "/usuarios", label: "Usuários", icon: UserCog, access: "ADMIN" },
+      { href: "/perfis", label: "Perfis de acesso", icon: ShieldCheck, access: "ADMIN" },
     ],
   },
 ];
 
-export function AppShell({ children, footer, isAdmin }: { children: ReactNode; footer: ReactNode; isAdmin: boolean }) {
+/** Níveis de acesso do usuário logado, usados para montar o menu e o modo "somente consulta". */
+export type ShellAccess = { isAdmin: boolean; levels: Record<ModuleKey, Level> };
+
+export function AppShell({ children, footer, access }: { children: ReactNode; footer: ReactNode; access: ShellAccess }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+
+  const canSee = (item: NavItem) =>
+    !item.access || (item.access === "ADMIN" ? access.isAdmin : access.levels[item.access] !== "NONE");
+  const groups = NAV.map((g) => ({ ...g, items: g.items.filter(canSee) })).filter((g) => g.items.length > 0);
+
+  // Perfil só de consulta no módulo da tela atual: formulários ficam desabilitados.
+  const current = moduleForPath(pathname);
+  const readOnly = !!current && current !== "ADMIN" && access.levels[current] === "VIEW";
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
   const nav = (
     <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
-      {NAV.map((group, i) => (
+      {groups.map((group, i) => (
         <div key={i}>
           {group.title && (
             <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted">
@@ -68,9 +89,7 @@ export function AppShell({ children, footer, isAdmin }: { children: ReactNode; f
             </p>
           )}
           <ul className="space-y-0.5">
-            {group.items
-              .filter((item) => !("adminOnly" in item && item.adminOnly) || isAdmin)
-              .map(({ href, label, icon: Icon }) => (
+            {group.items.map(({ href, label, icon: Icon }) => (
               <li key={href}>
                 <Link
                   href={href}
@@ -140,7 +159,14 @@ export function AppShell({ children, footer, isAdmin }: { children: ReactNode; f
       )}
 
       <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-        <div className="mx-auto max-w-7xl">{children}</div>
+        <div className="mx-auto max-w-7xl">
+          {readOnly && (
+            <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
+              Seu perfil tem acesso somente de <strong>consulta</strong> a este módulo: você pode ver as informações, mas não alterá-las.
+            </p>
+          )}
+          <ReadOnlyProvider readOnly={readOnly}>{children}</ReadOnlyProvider>
+        </div>
       </main>
     </div>
   );

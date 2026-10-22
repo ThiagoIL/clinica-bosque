@@ -20,7 +20,7 @@ export async function updateAccount(_: FormState, formData: FormData): Promise<F
   if (parsed.state) return parsed.state;
   const { name, currentPassword, newPassword, confirmPassword } = parsed.data;
 
-  return runAction(formData, async (user) => {
+  return runAction(null, formData, async (user) => {
     if (!newPassword) {
       await db.user.update({ where: { id: user.id }, data: { name } });
       return { success: "Dados atualizados." };

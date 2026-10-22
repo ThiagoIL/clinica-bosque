@@ -1,14 +1,18 @@
 import Link from "next/link";
 import { LogOut } from "lucide-react";
 import { AppShell } from "@/components/app-shell";
-import { requireUser } from "@/lib/auth";
+import { getAccess, requireUser } from "@/lib/auth";
+import { MODULE_KEYS, type Level, type ModuleKey } from "@/lib/modules";
+import { levelOf } from "@/lib/access";
 import { logout } from "@/app/login/actions";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
+  const snapshot = await getAccess();
+  const levels = Object.fromEntries(MODULE_KEYS.map((k) => [k, levelOf(snapshot, k)])) as Record<ModuleKey, Level>;
   return (
     <AppShell
-      isAdmin={user.role === "ADMIN"}
+      access={{ isAdmin: user.role === "ADMIN", levels }}
       footer={
         <div className="flex items-center justify-between gap-2">
           <Link href="/conta" className="min-w-0 leading-tight hover:underline" title="Minha conta e senha">

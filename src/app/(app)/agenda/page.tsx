@@ -11,6 +11,8 @@ import { appointmentStatusLabels } from "@/lib/labels";
 import { appointmentTone } from "@/lib/status";
 import { Badge, Card, LinkButton, PageHeader, param } from "@/components/ui/primitives";
 import { AppointmentActions } from "@/components/appointment-actions";
+import { getAccess } from "@/lib/auth";
+import { levelOf } from "@/lib/access";
 
 export const metadata = { title: "Agenda" };
 
@@ -38,6 +40,7 @@ export default async function AgendaPage({
   const patientId = param(sp.patientId) ?? "";
   const showCanceled = param(sp.canceled) === "1";
   const selectedId = param(sp.a);
+  const canLaunch = levelOf(await getAccess(), "LANCAMENTOS") === "EDIT";
 
   // intervalo de dias exibido
   let days: string[];
@@ -113,9 +116,11 @@ export default async function AgendaPage({
       <PageHeader
         title="Agenda"
         actions={
-          <LinkButton href={`/lancamentos/novo?date=${date}${professionalId ? `&professionalId=${professionalId}` : ""}${patientId ? `&patientId=${patientId}` : ""}`}>
-            <Plus className="size-4" /> Novo lançamento
-          </LinkButton>
+          canLaunch ? (
+            <LinkButton href={`/lancamentos/novo?date=${date}${professionalId ? `&professionalId=${professionalId}` : ""}${patientId ? `&patientId=${patientId}` : ""}`}>
+              <Plus className="size-4" /> Novo lançamento
+            </LinkButton>
+          ) : undefined
         }
       />
 
@@ -214,7 +219,7 @@ export default async function AgendaPage({
       {view === "month" ? (
         <MonthGrid days={days} month={date.slice(0, 7)} today={today} byDay={byDay} build={build} />
       ) : (
-        <TimeGrid days={days} today={today} byDay={byDay} build={build} professionalId={professionalId} patientId={patientId} />
+        <TimeGrid days={days} today={today} byDay={byDay} build={build} professionalId={professionalId} patientId={patientId} canLaunch={canLaunch} />
       )}
 
       {items.length === 0 && (
@@ -323,8 +328,9 @@ function layoutLanes(list: Item[]) {
 }
 
 function TimeGrid({
-  days, today, byDay, build, professionalId, patientId,
+  days, today, byDay, build, professionalId, patientId, canLaunch,
 }: {
+  canLaunch: boolean;
   days: string[];
   today: string;
   byDay: Map<string, Item[]>;
@@ -384,7 +390,7 @@ function TimeGrid({
             const placed = layoutLanes(byDay.get(d) ?? []);
             return (
               <div key={d} className={clsx("relative border-l border-line", d === today && "bg-brand-50/40")} style={{ height: gridHeight }}>
-                {hours.map((h, i) => (
+                {canLaunch && hours.map((h, i) => (
                   <Link
                     key={h}
                     href={newHref(d, h)}

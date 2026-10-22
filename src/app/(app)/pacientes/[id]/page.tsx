@@ -10,6 +10,8 @@ import { ActionForm, ConfirmSubmit, FormActions, SubmitButton, TextareaField } f
 import { PatientForm } from "../patient-form";
 import { addPatientNote, deletePatient, deletePatientNote } from "../actions";
 import { appointmentTone } from "@/lib/status";
+import { getAccess } from "@/lib/auth";
+import { levelOf } from "@/lib/access";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -46,6 +48,10 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
     }),
   ]);
 
+  const access = await getAccess();
+  const canLaunch = levelOf(access, "LANCAMENTOS") === "EDIT";
+  const canAgenda = levelOf(access, "AGENDA") !== "NONE";
+  const canFinance = levelOf(access, "FINANCEIRO") !== "NONE";
   const age = ageFromBirth(patient.birthDate);
 
   return (
@@ -59,8 +65,8 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
         actions={
           <>
             {!patient.active && <Badge>Inativo</Badge>}
-            <LinkButton href={`/lancamentos/novo?patientId=${patient.id}`}>Novo lançamento</LinkButton>
-            <LinkButton href={`/agenda?patientId=${patient.id}`} variant="outline">Ver agenda</LinkButton>
+            {canLaunch && <LinkButton href={`/lancamentos/novo?patientId=${patient.id}`}>Novo lançamento</LinkButton>}
+            {canAgenda && <LinkButton href={`/agenda?patientId=${patient.id}`} variant="outline">Ver agenda</LinkButton>}
           </>
         }
       />
@@ -100,6 +106,7 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
         </Card>
 
         <div className="space-y-6">
+          {canAgenda && (
           <Card title="Últimos atendimentos" padded={false}>
             {appointments.length === 0 ? (
               <div className="p-5">
@@ -122,6 +129,9 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
             )}
           </Card>
 
+          )}
+
+          {canFinance && (
           <Card title="Cobranças em aberto" padded={false}>
             {openEntries.length === 0 ? (
               <p className="p-5 text-sm text-muted">Nenhuma cobrança em aberto.</p>
@@ -139,6 +149,8 @@ export default async function PatientPage({ params }: { params: Promise<{ id: st
               </ul>
             )}
           </Card>
+
+          )}
 
           <Card title="Zona de risco">
             <p className="mb-3 text-sm text-muted">

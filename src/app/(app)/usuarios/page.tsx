@@ -18,8 +18,12 @@ export default async function UsersPage({
   const sp = await searchParams;
   const editId = param(sp.edit);
 
-  const [users, editing] = await Promise.all([
-    db.user.findMany({ orderBy: [{ active: "desc" }, { name: "asc" }] }),
+  const [users, profiles, editing] = await Promise.all([
+    db.user.findMany({
+      orderBy: [{ active: "desc" }, { name: "asc" }],
+      include: { accessProfile: { select: { name: true } } },
+    }),
+    db.accessProfile.findMany({ orderBy: { name: "asc" } }),
     editId && editId !== "new" ? db.user.findUnique({ where: { id: editId } }) : null,
   ]);
 
@@ -27,8 +31,15 @@ export default async function UsersPage({
     <>
       <PageHeader
         title="Usuários"
-        description="Quem pode acessar o sistema. Administradores gerenciam usuários; o perfil Atendimento usa o dia a dia da clínica."
-        actions={editId === undefined && <LinkButton href="/usuarios?edit=new">Novo usuário</LinkButton>}
+        description="Quem acessa o sistema. O administrador da empresa tem acesso total; os usuários seguem o perfil de acesso."
+        actions={
+          editId === undefined && (
+            <>
+              <LinkButton href="/perfis" variant="outline">Perfis de acesso</LinkButton>
+              <LinkButton href="/usuarios?edit=new">Novo usuário</LinkButton>
+            </>
+          )
+        }
       />
 
       {editId !== undefined && (
@@ -39,8 +50,18 @@ export default async function UsersPage({
               <TextField name="name" label="Nome" required defaultValue={editing?.name} />
               <TextField name="email" label="E-mail (login)" type="email" required autoComplete="off" defaultValue={editing?.email} />
               <SelectField
-                name="role" label="Perfil" required allowEmpty={false}
+                name="role" label="Nível" required allowEmpty={false}
                 options={optionsOf(userRoleLabels)} defaultValue={editing?.role ?? "STAFF"}
+              />
+              <SelectField
+                name="accessProfileId" label="Perfil de acesso (para usuários)" placeholder="Sem perfil"
+                options={profiles.map((p) => ({ value: p.id, label: p.name }))}
+                defaultValue={editing?.accessProfileId}
+                hint={
+                  profiles.length === 0
+                    ? "Crie um perfil em “Perfis de acesso”. Usuário sem perfil não acessa os módulos."
+                    : "Vale só para o nível Usuário. Sem perfil, o usuário não acessa os módulos."
+                }
               />
               <TextField
                 name="password" label={editing ? "Nova senha" : "Senha"} type="password" autoComplete="new-password"
@@ -60,7 +81,7 @@ export default async function UsersPage({
       <div className="table-wrap">
         <table className="table">
           <thead>
-            <tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Situação</th><th>Criado em</th><th /></tr>
+            <tr><th>Nome</th><th>E-mail</th><th>Nível</th><th>Perfil de acesso</th><th>Situação</th><th>Último acesso</th><th /></tr>
           </thead>
           <tbody>
             {users.map((u) => (
@@ -69,9 +90,18 @@ export default async function UsersPage({
                   {u.name} {u.id === me.id && <span className="text-xs text-muted">(você)</span>}
                 </td>
                 <td>{u.email}</td>
-                <td><Badge tone={u.role === "ADMIN" ? "violet" : "blue"}>{userRoleLabels[u.role]}</Badge></td>
+                <td>{userRoleLabels[u.role]}</td>
+                <td>
+                  {u.role === "ADMIN" ? (
+                    <span className="text-muted">Acesso total</span>
+                  ) : u.accessProfile ? (
+                    u.accessProfile.name
+                  ) : (
+                    <span className="text-muted">Sem perfil</span>
+                  )}
+                </td>
                 <td>{u.active ? <Badge tone="green">Ativo</Badge> : <Badge>Inativo</Badge>}</td>
-                <td className="whitespace-nowrap text-muted">{formatDateTime(u.createdAt)}</td>
+                <td className="whitespace-nowrap text-muted">{u.lastLoginAt ? formatDateTime(u.lastLoginAt) : "—"}</td>
                 <td className="text-right">
                   <Link href={`/usuarios?edit=${u.id}`} className="text-sm text-brand-700 hover:underline">Editar</Link>
                 </td>

@@ -46,7 +46,7 @@ export async function createEngagement(_: FormState, formData: FormData): Promis
   if (parsed.state) return parsed.state;
   const d = parsed.data;
 
-  return runAction(formData, async () => {
+  return runAction("LANCAMENTOS", formData, async () => {
     // ── datas das sessões ──
     const weekdays = [...new Set((d.weekdays ?? "").split(",").filter(Boolean).map(Number))].filter(
       (n) => Number.isInteger(n) && n >= 0 && n <= 6,
@@ -225,7 +225,7 @@ export async function updateEngagement(_: FormState, formData: FormData): Promis
   if (parsed.state) return parsed.state;
   const d = parsed.data;
 
-  return runAction(formData, async () => {
+  return runAction("LANCAMENTOS", formData, async () => {
     await db.$transaction(async (tx) => {
       const e = await tx.engagement.findUnique({
         where: { id: d.id },
@@ -307,7 +307,7 @@ const idSchema = z.object({ id: selectId("o lançamento") });
 export async function cancelEngagement(_: FormState, formData: FormData): Promise<FormState> {
   const parsed = parseForm(idSchema, formData);
   if (parsed.state) return parsed.state;
-  return runAction(formData, async () => {
+  return runAction("LANCAMENTOS", formData, async () => {
     const id = parsed.data.id;
     await db.$transaction(async (tx) => {
       await tx.engagement.update({ where: { id }, data: { status: "CANCELED" } });

@@ -18,7 +18,7 @@ export async function saveService(_: FormState, formData: FormData): Promise<For
   const parsed = parseForm(schema, formData);
   if (parsed.state) return parsed.state;
   const { id, particularPrice, ...data } = parsed.data;
-  return runAction(formData, async () => {
+  return runAction("CADASTROS", formData, async () => {
     const service = id
       ? await db.service.update({ where: { id }, data })
       : await db.service.create({ data });
