@@ -19,6 +19,33 @@ const contractSchema = z.object({
   valueNote: optional(80),
 });
 
+/** Valida os arquivos enviados no formulário (quantidade, tamanho total e tipo) e lê o conteúdo. */
+async function prepareFiles(formData: FormData) {
+  const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
+  if (files.length > MAX_FILES_PER_UPLOAD) {
+    throw new UserError(`Envie até ${MAX_FILES_PER_UPLOAD} arquivos por vez.`);
+  }
+  const total = files.reduce((sum, f) => sum + f.size, 0);
+  if (total > MAX_FILE_BYTES) {
+    throw new UserError(`O envio ultrapassa ${formatBytes(MAX_FILE_BYTES)} (enviado: ${formatBytes(total)}). Envie menos arquivos por vez.`);
+  }
+
+  const prepared = [];
+  for (const file of files) {
+    const ext = extensionOf(file.name);
+    const mimeType = ALLOWED_FILES[ext];
+    if (!mimeType) {
+      throw new UserError(
+        `Tipo de arquivo não permitido: “${file.name}”. Aceitos: ${Object.keys(ALLOWED_FILES).join(", ")}.`,
+      );
+    }
+    // nome sem caminho e sem caracteres de controle
+    const fileName = file.name.replace(/[\\/\u0000-\u001f]/g, "_").slice(-150);
+    prepared.push({ fileName, mimeType, sizeBytes: file.size, data: Buffer.from(await file.arrayBuffer()) });
+  }
+  return prepared;
+}
+
 export async function saveContract(_: FormState, formData: FormData): Promise<FormState> {
   const parsed = parseForm(contractSchema, formData);
   if (parsed.state) return parsed.state;
@@ -36,7 +63,9 @@ export async function saveContract(_: FormState, formData: FormData): Promise<Fo
       await db.contract.update({ where: { id }, data });
       return { success: "Contrato salvo." };
     }
-    const created = await db.contract.create({ data });
+    // anexos opcionais na criação: valida tudo antes de gravar o contrato
+    const files = await prepareFiles(formData);
+    const created = await db.contract.create({ data: { ...data, files: { create: files } } });
     return { redirectTo: `/contratos/${created.id}` };
   });
 }
@@ -80,29 +109,8 @@ export async function uploadContractFiles(_: FormState, formData: FormData): Pro
   if (parsed.state) return parsed.state;
 
   return runAction("CONTRATOS", formData, async () => {
-    const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
-    if (files.length === 0) throw new UserError("Selecione ao menos um arquivo.");
-    if (files.length > MAX_FILES_PER_UPLOAD) {
-      throw new UserError(`Envie até ${MAX_FILES_PER_UPLOAD} arquivos por vez.`);
-    }
-    const total = files.reduce((sum, f) => sum + f.size, 0);
-    if (total > MAX_FILE_BYTES) {
-      throw new UserError(`O envio ultrapassa ${formatBytes(MAX_FILE_BYTES)} (enviado: ${formatBytes(total)}). Envie menos arquivos por vez.`);
-    }
-
-    const prepared = [];
-    for (const file of files) {
-      const ext = extensionOf(file.name);
-      const mimeType = ALLOWED_FILES[ext];
-      if (!mimeType) {
-        throw new UserError(
-          `Tipo de arquivo não permitido: “${file.name}”. Aceitos: ${Object.keys(ALLOWED_FILES).join(", ")}.`,
-        );
-      }
-      // nome sem caminho e sem caracteres de controle
-      const fileName = file.name.replace(/[\\/\u0000-\u001f]/g, "_").slice(-150);
-      prepared.push({ fileName, mimeType, sizeBytes: file.size, data: Buffer.from(await file.arrayBuffer()) });
-    }
+    const prepared = await prepareFiles(formData);
+    if (prepared.length === 0) throw new UserError("Selecione ao menos um arquivo.");
 
     const contract = await db.contract.findUnique({ where: { id: parsed.data.contractId }, select: { id: true } });
     if (!contract) throw new UserError("Contrato não encontrado.");

@@ -35,6 +35,13 @@ export function PatientForm({
               <FormGrid>
                 <TextField name="name" label="Nome completo" required span={2} defaultValue={p?.name} />
                 <TextField name="socialName" label="Nome social" defaultValue={p?.socialName} />
+                <SelectField
+                  name="healthPlanId" label="Plano de saúde" allowEmpty={false}
+                  options={plans.map((x) => ({ value: x.id, label: x.name }))}
+                  defaultValue={p?.healthPlanId ?? defaultPlanId}
+                  hint="Define a tabela de preços usada nos lançamentos"
+                />
+                <TextField name="healthInsuranceNumber" label="Nº da carteirinha" defaultValue={p?.healthInsuranceNumber} />
                 <MaskedField name="cpf" label="CPF" mask="cpf" defaultValue={p?.cpf} />
                 <TextField name="rg" label="RG" defaultValue={p?.rg} />
                 <TextField
@@ -92,13 +99,6 @@ export function PatientForm({
             label: "Dados de saúde",
             content: (
               <FormGrid>
-                <SelectField
-                  name="healthPlanId" label="Plano de saúde" allowEmpty={false}
-                  options={plans.map((x) => ({ value: x.id, label: x.name }))}
-                  defaultValue={p?.healthPlanId ?? defaultPlanId}
-                  hint="Define a tabela de preços usada nos lançamentos"
-                />
-                <TextField name="healthInsuranceNumber" label="Nº da carteirinha" defaultValue={p?.healthInsuranceNumber} />
                 <SelectField name="bloodType" label="Tipo sanguíneo" options={BLOOD} defaultValue={p?.bloodType} />
                 <TextareaField name="diagnosis" label="Diagnóstico / queixa principal" span={2} defaultValue={p?.diagnosis} />
                 <TextareaField name="allergies" label="Alergias" span={2} defaultValue={p?.allergies} />

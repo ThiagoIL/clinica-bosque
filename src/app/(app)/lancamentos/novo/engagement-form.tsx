@@ -7,14 +7,13 @@ import { LinkButton } from "@/components/ui/primitives";
 import {
   MAX_OCCURRENCES, endOfMonth, formatDate, occurrenceDates, weekdayName, type RecurrenceKind,
 } from "@/lib/dates";
-import { WEEKDAY_OPTIONS, billingModeLabels, optionsOf, recurrenceLabels, repeatEndLabels, serviceKindLabels } from "@/lib/labels";
+import { WEEKDAY_OPTIONS, attendanceKindLabels, billingModeLabels, optionsOf, recurrenceLabels, repeatEndLabels } from "@/lib/labels";
 import { centsToInput, formatMoney, parseMoney } from "@/lib/money";
 import { createEngagement } from "../actions";
 
 type ServiceOption = {
   id: string;
   name: string;
-  kind: keyof typeof serviceKindLabels;
   duration: number;
   /** preço em centavos por plano de saúde */
   prices: Record<string, number>;
@@ -22,7 +21,7 @@ type ServiceOption = {
 
 type Props = {
   patients: { id: string; name: string; planId: string | null }[];
-  professionals: { id: string; name: string }[];
+  professionals: { id: string; name: string; specialty: string | null }[];
   services: ServiceOption[];
   plans: { id: string; name: string; isDefault: boolean }[];
   defaults: { patientId?: string; professionalId?: string; date: string; time: string };
@@ -31,7 +30,7 @@ type Props = {
 export function EngagementForm({ patients, professionals, services, plans, defaults }: Props) {
   const particularId = plans.find((p) => p.isDefault)?.id;
   const [patientId, setPatientId] = useState(defaults.patientId ?? "");
-  const [kindFilter, setKindFilter] = useState("");
+  const [kind, setKind] = useState("SESSION");
   const [serviceId, setServiceId] = useState("");
   const [unitPrice, setUnitPrice] = useState("");
   const [priceNote, setPriceNote] = useState("");
@@ -49,7 +48,6 @@ export function EngagementForm({ patients, professionals, services, plans, defau
   const patient = patients.find((p) => p.id === patientId);
   const plan = plans.find((p) => p.id === patient?.planId) ?? plans.find((p) => p.isDefault);
   const service = services.find((s) => s.id === serviceId);
-  const visibleServices = services.filter((s) => !kindFilter || s.kind === kindFilter);
 
   /** Sugere o valor da tabela de preços do plano do paciente (ou do Particular, se o plano não tiver). */
   function suggestPrice(svc: ServiceOption | undefined, pat: typeof patient) {
@@ -118,22 +116,18 @@ export function EngagementForm({ patients, professionals, services, plans, defau
           />
           <SelectField
             name="professionalId" label="Profissional" required defaultValue={defaults.professionalId}
-            options={professionals.map((p) => ({ value: p.id, label: p.name }))}
+            options={professionals.map((p) => ({ value: p.id, label: p.specialty ? `${p.name} — ${p.specialty}` : p.name }))}
           />
-          <div />
           <SelectField
-            name="kindFilter" label="Tipo do atendimento" value={kindFilter} onChange={setKindFilter}
-            placeholder="Todos os tipos"
-            options={Object.entries(serviceKindLabels).map(([value, label]) => ({ value, label }))}
-            hint="Filtra a lista de serviços (consulta, retorno, sessão, terapia…)"
+            name="kind" label="Tipo do atendimento" required allowEmpty={false}
+            options={optionsOf(attendanceKindLabels)} value={kind} onChange={setKind}
           />
           <SelectField
             name="serviceId" label="Serviço" required value={serviceId} onChange={onServiceChange} span={2}
-            options={visibleServices.map((s) => ({ value: s.id, label: `${s.name} (${serviceKindLabels[s.kind]})` }))}
-            hint={service ? `Tipo: ${serviceKindLabels[service.kind]}` : undefined}
+            options={services.map((s) => ({ value: s.id, label: s.name }))}
           />
         </FormGrid>
-        {service?.kind === "RETURN" && (
+        {kind === "RETURN" && (
           <p className="mt-3 rounded-lg bg-accent-50 px-3 py-2 text-xs text-accent-700">
             Lançamento de <strong>retorno</strong>. Confira o valor abaixo — retornos costumam ter valor reduzido ou ser sem custo.
           </p>

@@ -1,12 +1,12 @@
 import type {
   AccountType, AppointmentStatus, BillingMode, EngagementStatus, EntryKind, EntryStatus,
-  PaymentMethod, Recurrence, RepeatEnd, ServiceKind, Sex, StockMovementType, UserRole,
+  AttendanceKind, PaymentMethod, Recurrence, RepeatEnd, Sex, StockMovementType, UserRole,
 } from "@/generated/prisma/enums";
 
 export const sexLabels: Record<Sex, string> = { FEMALE: "Feminino", MALE: "Masculino", OTHER: "Outro" };
 
-export const serviceKindLabels: Record<ServiceKind, string> = {
-  CONSULTATION: "Consulta", RETURN: "Retorno", SESSION: "Sessão", THERAPY: "Terapia", EXAM: "Exame", OTHER: "Outro",
+export const attendanceKindLabels: Record<AttendanceKind, string> = {
+  CONSULTATION: "Consulta", RETURN: "Retorno", SESSION: "Sessão",
 };
 
 export const recurrenceLabels: Record<Recurrence, string> = {

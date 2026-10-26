@@ -3,12 +3,11 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { runAction } from "@/lib/action";
-import { checkbox, integer, optionalMoney, parseForm, required, requiredEnum, type FormState } from "@/lib/form";
+import { UserError, checkbox, integer, optionalMoney, parseForm, required, type FormState } from "@/lib/form";
 
 const schema = z.object({
   id: z.string().optional(),
   name: required("Nome", 120),
-  kind: requiredEnum(["CONSULTATION", "RETURN", "SESSION", "THERAPY", "EXAM", "OTHER"], "Tipo"),
   particularPrice: optionalMoney(),
   durationMinutes: integer("Duração", 5, 600),
   active: checkbox(),
@@ -33,5 +32,28 @@ export async function saveService(_: FormState, formData: FormData): Promise<For
       });
     }
     return { redirectTo: id ? "/servicos" : "/precos" };
+  });
+}
+
+const idSchema = z.object({ id: z.string().min(1) });
+
+export async function deleteService(_: FormState, formData: FormData): Promise<FormState> {
+  const parsed = parseForm(idSchema, formData);
+  if (parsed.state) return parsed.state;
+  const { id } = parsed.data;
+
+  return runAction("CADASTROS", formData, async () => {
+    const [engagements, appointments] = await Promise.all([
+      db.engagement.count({ where: { serviceId: id } }),
+      db.appointment.count({ where: { serviceId: id } }),
+    ]);
+    if (engagements + appointments > 0) {
+      throw new UserError(
+        `Este serviço já foi usado em ${engagements} lançamento(s) e não pode ser excluído. Desative o serviço em vez disso.`,
+      );
+    }
+    // os preços da tabela do serviço são removidos junto (cascade)
+    await db.service.delete({ where: { id } });
+    return { success: "Serviço excluído." };
   });
 }

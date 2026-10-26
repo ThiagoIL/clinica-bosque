@@ -70,3 +70,24 @@ export async function saveUser(_: FormState, formData: FormData): Promise<FormSt
     return { redirectTo: "/usuarios" };
   });
 }
+
+const idSchema = z.object({ id: z.string().min(1) });
+
+export async function deleteUser(_: FormState, formData: FormData): Promise<FormState> {
+  const parsed = parseForm(idSchema, formData);
+  if (parsed.state) return parsed.state;
+  const { id } = parsed.data;
+
+  return runAction("ADMIN", formData, async (current) => {
+    if (id === current.id) throw new UserError("Você não pode excluir o seu próprio usuário.");
+    const target = await db.user.findUnique({ where: { id } });
+    if (!target) throw new UserError("Usuário não encontrado.");
+    if (target.role === "ADMIN" && target.active) {
+      const others = await db.user.count({ where: { role: "ADMIN", active: true, id: { not: id } } });
+      if (others === 0) throw new UserError("É necessário manter ao menos um administrador ativo.");
+    }
+    // as anotações de pacientes escritas por ele ficam sem autor
+    await db.user.delete({ where: { id } });
+    return { success: "Usuário excluído." };
+  });
+}

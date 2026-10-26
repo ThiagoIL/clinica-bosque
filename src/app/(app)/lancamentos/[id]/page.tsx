@@ -3,12 +3,12 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
-import { WEEKDAY_OPTIONS, appointmentStatusLabels, billingModeLabels, engagementStatusLabels, recurrenceLabels, serviceKindLabels } from "@/lib/labels";
+import { WEEKDAY_OPTIONS, appointmentStatusLabels, attendanceKindLabels, billingModeLabels, engagementStatusLabels, recurrenceLabels } from "@/lib/labels";
 import { appointmentTone, engagementTone, entryDisplayStatus } from "@/lib/status";
 import { ActionForm, ConfirmSubmit } from "@/components/ui/form-kit";
 import { Badge, Card, LinkButton, PageHeader } from "@/components/ui/primitives";
 import { AppointmentActions } from "@/components/appointment-actions";
-import { cancelEngagement } from "../actions";
+import { cancelEngagement, deleteEngagement } from "../actions";
 import { getAccess } from "@/lib/auth";
 import { levelOf } from "@/lib/access";
 
@@ -21,7 +21,7 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
     include: {
       patient: { select: { id: true, name: true } },
       professional: { select: { id: true, name: true } },
-      service: { select: { name: true, kind: true } },
+      service: { select: { name: true } },
       healthPlan: { select: { name: true } },
       appointments: { orderBy: { startsAt: "asc" } },
       entries: { orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }] },
@@ -60,7 +60,7 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
             <Info label="Profissional">{engagement.professional.name}</Info>
             <Info label="Serviço">{engagement.service.name}</Info>
             <Info label="Tipo">
-              <Badge tone={engagement.service.kind === "RETURN" ? "amber" : "gray"}>{serviceKindLabels[engagement.service.kind]}</Badge>
+              <Badge tone={engagement.kind === "RETURN" ? "amber" : "gray"}>{attendanceKindLabels[engagement.kind]}</Badge>
             </Info>
             <Info label="Plano de saúde">{engagement.healthPlan?.name ?? "—"}</Info>
             <Info label="Repetição">
@@ -134,16 +134,26 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
         </ul>
       </Card>
 
-      {engagement.status !== "CANCELED" && (
-        <div className="mt-6">
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        {engagement.status !== "CANCELED" && (
           <ActionForm action={cancelEngagement}>
             <input type="hidden" name="id" value={engagement.id} />
             <ConfirmSubmit message="Cancelar o lançamento? Os atendimentos futuros e as cobranças em aberto serão cancelados.">
               Cancelar lançamento
             </ConfirmSubmit>
           </ActionForm>
-        </div>
-      )}
+        )}
+        <ActionForm action={deleteEngagement}>
+          <input type="hidden" name="id" value={engagement.id} />
+          <input type="hidden" name="redirect" value="1" />
+          <ConfirmSubmit
+            variant="outline"
+            message={`Excluir o lançamento #${engagement.number}? Os ${engagement.appointments.length} atendimento(s) e as cobranças dele serão removidos. Para manter o histórico, use “Cancelar lançamento”.`}
+          >
+            Excluir lançamento
+          </ConfirmSubmit>
+        </ActionForm>
+      </div>
     </>
   );
 }

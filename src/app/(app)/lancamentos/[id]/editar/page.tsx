@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { centsToInput, formatMoney } from "@/lib/money";
 import { formatDateTime } from "@/lib/dates";
-import { WEEKDAY_OPTIONS, billingModeLabels, recurrenceLabels, serviceKindLabels } from "@/lib/labels";
+import { WEEKDAY_OPTIONS, attendanceKindLabels, billingModeLabels, optionsOf, recurrenceLabels } from "@/lib/labels";
 import { ActionForm, FormActions, FormGrid, SelectField, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
 import { Card, LinkButton, PageHeader } from "@/components/ui/primitives";
 import { updateEngagement } from "../../actions";
@@ -53,8 +53,12 @@ export default async function EditEngagementPage({ params }: { params: Promise<{
               />
               <SelectField
                 name="serviceId" label="Serviço" required allowEmpty={false} defaultValue={e.serviceId}
-                options={services.map((s) => ({ value: s.id, label: `${s.name} (${serviceKindLabels[s.kind]})` }))}
+                options={services.map((s) => ({ value: s.id, label: s.name }))}
                 hint="Vale para os atendimentos futuros em aberto"
+              />
+              <SelectField
+                name="kind" label="Tipo do atendimento" required allowEmpty={false} defaultValue={e.kind}
+                options={optionsOf(attendanceKindLabels)}
               />
               {perSession ? (
                 <>

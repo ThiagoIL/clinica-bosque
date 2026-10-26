@@ -11,11 +11,12 @@ lançamento de consultas/sessões/terapias com agendamento recorrente, agenda co
 | Módulo | O que faz |
 | --- | --- |
 | **Pacientes** | Cadastro por seções: dados do paciente, familiar/responsável, saúde, financeiro e observações (+ histórico de anotações). |
-| **Profissionais** | Médicos/terapeutas, com cor própria na agenda (paleta pronta ou cor personalizada). |
-| **Serviços** | Catálogo por tipo: consulta, retorno, sessão, terapia, exame. |
+| **Profissionais** | Médicos/terapeutas, com especialidade (do cadastro), data de nascimento e cor própria na agenda (paleta pronta ou cor personalizada). Podem ser excluídos enquanto não tiverem atendimentos; depois disso, apenas desativados. |
+| **Especialidades** | Cadastro usado no cadastro do profissional e nos filtros da agenda e dos lançamentos. |
+| **Serviços** | Catálogo de serviços e duração. Podem ser excluídos enquanto não foram usados em lançamentos. |
 | **Planos de saúde e tabela de preços** | Cadastro de convênios (o plano **Particular** sempre existe) e uma tabela de preços por plano para serviços e produtos, com opção de copiar de outro plano com ajuste percentual. O paciente tem um plano e o valor do lançamento é sugerido pela tabela. |
-| **Lançamentos** | Seleciona paciente, profissional, tipo/serviço, valor e a repetição (diária, semanal, quinzenal, mensal) com **dias da semana** à escolha e término por **quantidade de sessões, data ou mês**. Gera todos os agendamentos e o financeiro (por sessão, pacote único ou parcelado). Lançamentos de **retorno** têm tipo próprio. Pode ser **editado** depois. |
-| **Agenda** | Visões dia/semana/mês; filtros por profissional e paciente; confirmar, marcar realizado/faltou, cancelar e reagendar. |
+| **Lançamentos** | Seleciona paciente, profissional, tipo do atendimento (consulta, retorno ou sessão), serviço, valor e a repetição (diária, semanal, quinzenal, mensal) com **dias da semana** à escolha e término por **quantidade de sessões, data ou mês**. Gera todos os agendamentos e o financeiro (por sessão, pacote único ou parcelado). Pode ser **editado** ou **excluído** direto da lista (exclusão barrada quando há cobrança paga: nesse caso, cancele o lançamento). |
+| **Agenda** | Visões dia/semana/mês; filtros por especialidade, profissional e paciente; confirmar, marcar realizado/faltou, cancelar e reagendar. |
 | **Financeiro** | Contas a receber e a pagar (com parcelamento e baixa), extrato por conta com saldo corrido e fluxo de caixa (realizado × previsto). |
 | **Colaboradores e contratos** | Cadastro de colaboradores/fornecedores (favorecidos das contas a pagar) e **gestão de contratos**: ativos, a vencer, vencidos e encerrados, com **anexos** (PDF, imagens, Word, Excel…). O painel inicial avisa dos contratos que vencem em 30 dias. |
 | **Estoque** | Itens, saldo mínimo, entradas/saídas/ajustes; compra pode gerar conta a pagar. **Desligado por padrão**: só aparece se o fornecedor liberar o módulo. |

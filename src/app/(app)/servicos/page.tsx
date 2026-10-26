@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatMoney, centsToInput } from "@/lib/money";
-import { optionsOf, serviceKindLabels } from "@/lib/labels";
-import { ActionForm, CheckboxField, FormActions, FormGrid, SelectField, SubmitButton, TextField } from "@/components/ui/form-kit";
+import { ActionForm, CheckboxField, DeleteButton, FormActions, FormGrid, SubmitButton, TextField } from "@/components/ui/form-kit";
 import { Badge, Card, EmptyState, LinkButton, PageHeader, param } from "@/components/ui/primitives";
-import { saveService } from "./actions";
+import { deleteService, saveService } from "./actions";
 
 export const metadata = { title: "Serviços" };
 
@@ -30,7 +29,7 @@ export default async function ServicesPage({
     <>
       <PageHeader
         title="Serviços"
-        description="Catálogo de consultas, retornos, sessões e terapias. Os valores por plano de saúde ficam na tabela de preços."
+        description="Catálogo dos serviços prestados pela clínica. Os valores por plano de saúde ficam na tabela de preços."
         actions={
           editId === undefined && (
             <>
@@ -47,10 +46,6 @@ export default async function ServicesPage({
             {editing && <input type="hidden" name="id" value={editing.id} />}
             <FormGrid cols={4}>
               <TextField name="name" label="Nome" required span={2} defaultValue={editing?.name} />
-              <SelectField
-                name="kind" label="Tipo" required allowEmpty={false}
-                options={optionsOf(serviceKindLabels)} defaultValue={editing?.kind ?? "SESSION"}
-              />
               <TextField
                 name="particularPrice" label="Valor Particular (R$)" inputMode="decimal"
                 hint="Os demais planos são definidos na tabela de preços"
@@ -76,19 +71,22 @@ export default async function ServicesPage({
         <div className="table-wrap">
           <table className="table">
             <thead>
-              <tr><th>Nome</th><th>Tipo</th><th>Particular</th><th>Planos com preço</th><th>Duração</th><th>Situação</th><th /></tr>
+              <tr><th>Nome</th><th>Particular</th><th>Planos com preço</th><th>Duração</th><th>Situação</th><th /></tr>
             </thead>
             <tbody>
               {services.map((s) => (
                 <tr key={s.id}>
                   <td className="font-medium">{s.name}</td>
-                  <td>{serviceKindLabels[s.kind]}</td>
                   <td className="tabular-nums">{s.prices[0] ? formatMoney(s.prices[0].priceCents) : <span className="text-muted">sem preço</span>}</td>
                   <td className="tabular-nums">{s._count.prices}</td>
                   <td>{s.durationMinutes} min</td>
                   <td>{s.active ? <Badge tone="green">Ativo</Badge> : <Badge>Inativo</Badge>}</td>
-                  <td className="text-right">
+                  <td className="space-x-3 whitespace-nowrap text-right">
                     <Link href={`/servicos?edit=${s.id}`} className="text-sm text-brand-700 hover:underline">Editar</Link>
+                    <DeleteButton
+                      action={deleteService} id={s.id}
+                      message={`Excluir o serviço “${s.name}” e os preços dele na tabela? Serviços já usados em lançamentos não podem ser excluídos.`}
+                    />
                   </td>
                 </tr>
               ))}

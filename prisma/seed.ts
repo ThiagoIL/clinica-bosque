@@ -15,11 +15,16 @@ async function main() {
     return;
   }
 
+  const [psiquiatria, psicologia, fisioterapia] = await Promise.all(
+    ["Psiquiatria", "Psicologia", "Fisioterapia"].map((name) =>
+      db.specialty.upsert({ where: { name }, update: {}, create: { name } }),
+    ),
+  );
   await db.professional.createMany({
     data: [
-      { name: "Dra. Helena Duarte", specialty: "Psiquiatria", registryType: "CRM", registryNumber: "12345-SP", color: "#2f8f68" },
-      { name: "Dr. Marcos Ribeiro", specialty: "Psicologia", registryType: "CRP", registryNumber: "06/98765", color: "#3b82f6" },
-      { name: "Dra. Camila Torres", specialty: "Fisioterapia", registryType: "CREFITO", registryNumber: "54321-F", color: "#d97706" },
+      { name: "Dra. Helena Duarte", specialtyId: psiquiatria.id, registryType: "CRM", registryNumber: "12345-SP", color: "#2f8f68" },
+      { name: "Dr. Marcos Ribeiro", specialtyId: psicologia.id, registryType: "CRP", registryNumber: "06/98765", color: "#3b82f6" },
+      { name: "Dra. Camila Torres", specialtyId: fisioterapia.id, registryType: "CREFITO", registryNumber: "54321-F", color: "#d97706" },
     ],
   });
 
@@ -30,16 +35,16 @@ async function main() {
   const unimed = await db.healthPlan.create({ data: { name: "Unimed" } });
   const bradesco = await db.healthPlan.create({ data: { name: "Bradesco Saúde" } });
 
-  // [nome, tipo, duração (min), preço Particular, preço Unimed, preço Bradesco] (centavos)
+  // [nome, duração (min), preço Particular, preço Unimed, preço Bradesco] (centavos)
   const catalog = [
-    ["Consulta médica", "CONSULTATION", 40, 25000, 18000, 17000],
-    ["Retorno médico", "RETURN", 30, 0, 0, 0],
-    ["Sessão de psicoterapia", "SESSION", 50, 15000, 11000, 10500],
-    ["Fisioterapia", "THERAPY", 45, 12000, 8500, 8000],
-    ["Avaliação inicial", "EXAM", 60, 20000, 14000, 13500],
+    ["Consulta médica", 40, 25000, 18000, 17000],
+    ["Retorno médico", 30, 0, 0, 0],
+    ["Sessão de psicoterapia", 50, 15000, 11000, 10500],
+    ["Fisioterapia", 45, 12000, 8500, 8000],
+    ["Avaliação inicial", 60, 20000, 14000, 13500],
   ] as const;
-  for (const [name, kind, durationMinutes, p0, p1, p2] of catalog) {
-    const service = await db.service.create({ data: { name, kind, durationMinutes } });
+  for (const [name, durationMinutes, p0, p1, p2] of catalog) {
+    const service = await db.service.create({ data: { name, durationMinutes } });
     await db.servicePrice.createMany({
       data: [
         { serviceId: service.id, healthPlanId: particular.id, priceCents: p0 },

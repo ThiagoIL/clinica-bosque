@@ -13,7 +13,11 @@ export default async function NewEngagementPage({
   const sp = await searchParams;
   const [patients, professionals, services, plans, prices] = await Promise.all([
     db.patient.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, healthPlanId: true } }),
-    db.professional.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    db.professional.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, specialty: { select: { name: true } } },
+    }),
     db.service.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     db.healthPlan.findMany({ orderBy: [{ isDefault: "desc" }, { name: "asc" }], select: { id: true, name: true, isDefault: true } }),
     db.servicePrice.findMany(),
@@ -54,12 +58,11 @@ export default async function NewEngagementPage({
       ) : (
         <EngagementForm
           patients={patients.map((p) => ({ id: p.id, name: p.name, planId: p.healthPlanId }))}
-          professionals={professionals}
+          professionals={professionals.map((p) => ({ id: p.id, name: p.name, specialty: p.specialty?.name ?? null }))}
           plans={plans}
           services={services.map((s) => ({
             id: s.id,
             name: s.name,
-            kind: s.kind,
             duration: s.durationMinutes,
             prices: priceMap.get(s.id) ?? {},
           }))}

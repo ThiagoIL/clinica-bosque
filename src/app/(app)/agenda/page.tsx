@@ -37,6 +37,7 @@ export default async function AgendaPage({
   const view = (["day", "week", "month"] as const).find((v) => v === param(sp.view)) ?? "week";
   const date = isDateString(param(sp.date)) ? param(sp.date)! : today;
   const professionalId = param(sp.professionalId) ?? "";
+  const specialtyId = param(sp.specialtyId) ?? "";
   const patientId = param(sp.patientId) ?? "";
   const showCanceled = param(sp.canceled) === "1";
   const selectedId = param(sp.a);
@@ -55,11 +56,12 @@ export default async function AgendaPage({
   const rangeStart = zoned(days[0], "00:00");
   const rangeEnd = zoned(addDays(days[days.length - 1], 1), "00:00");
 
-  const [items, professionals, patients, selected] = await Promise.all([
+  const [items, professionals, specialties, patients, selected] = await Promise.all([
     db.appointment.findMany({
       where: {
         startsAt: { gte: rangeStart, lt: rangeEnd },
         ...(professionalId ? { professionalId } : {}),
+        ...(specialtyId ? { professional: { specialtyId } } : {}),
         ...(patientId ? { patientId } : {}),
         ...(showCanceled ? {} : { status: { not: "CANCELED" } }),
       },
@@ -70,7 +72,12 @@ export default async function AgendaPage({
         service: { select: { name: true } },
       },
     }),
-    db.professional.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, color: true } }),
+    db.professional.findMany({
+      where: { active: true, ...(specialtyId ? { specialtyId } : {}) },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, color: true },
+    }),
+    db.specialty.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
     db.patient.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
     selectedId
       ? db.appointment.findUnique({
@@ -95,7 +102,7 @@ export default async function AgendaPage({
   const build = (over: Record<string, string | undefined>) => {
     const q = new URLSearchParams();
     const merged: Record<string, string | undefined> = {
-      view, date, professionalId, patientId, canceled: showCanceled ? "1" : undefined, ...over,
+      view, date, specialtyId, professionalId, patientId, canceled: showCanceled ? "1" : undefined, ...over,
     };
     for (const [k, v] of Object.entries(merged)) if (v) q.set(k, v);
     return `/agenda?${q.toString()}`;
@@ -154,6 +161,13 @@ export default async function AgendaPage({
 
         <form action="/agenda" method="get" className="flex flex-wrap items-end gap-3">
           <input type="hidden" name="view" value={view} />
+          <div className="min-w-44">
+            <label className="label" htmlFor="f-spec">Especialidade</label>
+            <select id="f-spec" name="specialtyId" defaultValue={specialtyId} className="input">
+              <option value="">Todas</option>
+              {specialties.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </div>
           <div className="min-w-48">
             <label className="label" htmlFor="f-prof">Profissional</label>
             <select id="f-prof" name="professionalId" defaultValue={professionalId} className="input">

@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatPhone } from "@/lib/cpf";
-import { ActionForm, CheckboxField, ColorField, FormActions, FormGrid, MaskedField, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
+import { dateOnlyToString } from "@/lib/dates";
+import {
+  ActionForm, CheckboxField, ColorField, DeleteButton, FormActions, FormGrid, MaskedField, SelectField, SubmitButton,
+  TextField, TextareaField,
+} from "@/components/ui/form-kit";
 import { Badge, Card, EmptyState, LinkButton, PageHeader, param } from "@/components/ui/primitives";
-import { saveProfessional } from "./actions";
+import { deleteProfessional, saveProfessional } from "./actions";
 
 export const metadata = { title: "Profissionais" };
 
@@ -17,9 +21,16 @@ export default async function ProfessionalsPage({
   const showForm = editId !== undefined;
 
   const [professionals, editing] = await Promise.all([
-    db.professional.findMany({ orderBy: [{ active: "desc" }, { name: "asc" }] }),
+    db.professional.findMany({ orderBy: [{ active: "desc" }, { name: "asc" }], include: { specialty: { select: { name: true } } } }),
     editId && editId !== "new" ? db.professional.findUnique({ where: { id: editId } }) : null,
   ]);
+  // só entram na lista as especialidades ativas (mais a atual do profissional, mesmo inativa)
+  const specialties = showForm
+    ? await db.specialty.findMany({
+        where: { OR: [{ active: true }, ...(editing?.specialtyId ? [{ id: editing.specialtyId }] : [])] },
+        orderBy: { name: "asc" },
+      })
+    : [];
 
   return (
     <>
@@ -35,10 +46,19 @@ export default async function ProfessionalsPage({
             {editing && <input type="hidden" name="id" value={editing.id} />}
             <FormGrid>
               <TextField name="name" label="Nome" required span={2} defaultValue={editing?.name} />
-              <TextField name="specialty" label="Especialidade" defaultValue={editing?.specialty} />
+              <SelectField
+                name="specialtyId" label="Especialidade" placeholder="Sem especialidade"
+                options={specialties.map((s) => ({ value: s.id, label: s.active ? s.name : `${s.name} (inativa)` }))}
+                defaultValue={editing?.specialtyId}
+                hint={specialties.length === 0 ? "Cadastre em Cadastros › Especialidades" : undefined}
+              />
               <TextField name="registryType" label="Conselho (CRM, CRP…)" defaultValue={editing?.registryType} />
               <TextField name="registryNumber" label="Nº do registro" defaultValue={editing?.registryNumber} />
               <MaskedField name="cpf" label="CPF" mask="cpf" defaultValue={editing?.cpf} />
+              <TextField
+                name="birthDate" label="Data de nascimento" type="date"
+                defaultValue={editing?.birthDate ? dateOnlyToString(editing.birthDate) : ""}
+              />
               <MaskedField name="phone" label="Telefone" mask="phone" defaultValue={editing?.phone} />
               <TextField name="email" label="E-mail" type="email" defaultValue={editing?.email} />
               <ColorField name="color" label="Cor na agenda" span={2} defaultValue={editing?.color ?? "#2f8f68"} />
@@ -70,12 +90,16 @@ export default async function ProfessionalsPage({
                       {p.name}
                     </span>
                   </td>
-                  <td>{p.specialty ?? "—"}</td>
+                  <td>{p.specialty?.name ?? "—"}</td>
                   <td>{[p.registryType, p.registryNumber].filter(Boolean).join(" ") || "—"}</td>
                   <td>{formatPhone(p.phone) || "—"}</td>
                   <td>{p.active ? <Badge tone="green">Ativo</Badge> : <Badge>Inativo</Badge>}</td>
-                  <td className="text-right">
+                  <td className="space-x-3 whitespace-nowrap text-right">
                     <Link href={`/profissionais?edit=${p.id}`} className="text-sm text-brand-700 hover:underline">Editar</Link>
+                    <DeleteButton
+                      action={deleteProfessional} id={p.id}
+                      message={`Excluir o profissional “${p.name}”? Quem já tem atendimentos não pode ser excluído; desative o cadastro nesse caso.`}
+                    />
                   </td>
                 </tr>
               ))}

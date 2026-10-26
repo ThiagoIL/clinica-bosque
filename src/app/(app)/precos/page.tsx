@@ -3,7 +3,6 @@ import clsx from "clsx";
 import { db } from "@/lib/db";
 import { loadSnapshot } from "@/lib/access";
 import { centsToInput } from "@/lib/money";
-import { serviceKindLabels } from "@/lib/labels";
 import {
   ActionForm, CheckboxField, FormActions, FormGrid, PriceInput, SelectField, SubmitButton, TextField,
 } from "@/components/ui/form-kit";
@@ -23,7 +22,7 @@ export default async function PriceTablePage({
 
   const stockEnabled = (await loadSnapshot(null)).enabled.includes("ESTOQUE");
   const [services, products, servicePrices, productPrices] = await Promise.all([
-    db.service.findMany({ where: { active: true }, orderBy: [{ kind: "asc" }, { name: "asc" }] }),
+    db.service.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     stockEnabled ? db.stockItem.findMany({ where: { active: true }, orderBy: { name: "asc" } }) : [],
     db.servicePrice.findMany({ where: { healthPlanId: plan.id } }),
     stockEnabled ? db.productPrice.findMany({ where: { healthPlanId: plan.id } }) : [],
@@ -66,12 +65,11 @@ export default async function PriceTablePage({
               </div>
             ) : (
               <table className="table">
-                <thead><tr><th>Serviço</th><th>Tipo</th><th className="text-right">Preço (R$)</th></tr></thead>
+                <thead><tr><th>Serviço</th><th className="text-right">Preço (R$)</th></tr></thead>
                 <tbody>
                   {services.map((s) => (
                     <tr key={s.id}>
                       <td className="font-medium">{s.name}</td>
-                      <td><Badge tone={s.kind === "RETURN" ? "amber" : "gray"}>{serviceKindLabels[s.kind]}</Badge></td>
                       <td className="text-right">
                         <PriceInput name={`s_${s.id}`} defaultValue={sPrice.has(s.id) ? centsToInput(sPrice.get(s.id)) : ""} />
                       </td>

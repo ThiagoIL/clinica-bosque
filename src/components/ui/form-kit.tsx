@@ -134,6 +134,52 @@ export function ConfirmSubmit({
   );
 }
 
+/**
+ * "Excluir" para linhas de tabela: pede confirmação, executa a action e avisa
+ * quando a exclusão é barrada (ex.: registro em uso).
+ */
+export function DeleteButton({
+  action,
+  id,
+  message,
+  fields,
+  children = "Excluir",
+}: {
+  action: Action;
+  id: string;
+  message: string;
+  /** Campos extras enviados junto com o id. */
+  fields?: Record<string, string>;
+  children?: ReactNode;
+}) {
+  const [state, formAction, pending] = useActionState(action, {} as FormState);
+  const readOnly = useContext(ReadOnlyCtx);
+
+  useEffect(() => {
+    if (state.error) window.alert(state.error);
+  }, [state]);
+
+  function onClick() {
+    if (!window.confirm(message)) return;
+    const data = new FormData();
+    data.set("id", id);
+    for (const [key, value] of Object.entries(fields ?? {})) data.set(key, value);
+    startTransition(() => formAction(data));
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={pending || readOnly}
+      className="inline-flex items-center gap-1 text-sm text-red-600 hover:underline disabled:opacity-50"
+    >
+      {pending && <Loader2 className="size-3.5 animate-spin" />}
+      {children}
+    </button>
+  );
+}
+
 // ── campos ──
 
 type Option = { value: string; label: string };

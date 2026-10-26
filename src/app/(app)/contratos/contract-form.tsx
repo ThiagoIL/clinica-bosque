@@ -1,6 +1,7 @@
 import type { Contract } from "@/generated/prisma/client";
-import { ActionForm, FormActions, FormGrid, SelectField, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
+import { ActionForm, FileField, FormActions, FormGrid, SelectField, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
 import { LinkButton } from "@/components/ui/primitives";
+import { FILE_ACCEPT, MAX_FILES_PER_UPLOAD, MAX_FILE_BYTES, formatBytes } from "@/lib/contracts";
 import { dateOnlyToString } from "@/lib/dates";
 import { centsToInput } from "@/lib/money";
 import { saveContract } from "./actions";
@@ -37,6 +38,12 @@ export function ContractForm({
         />
         <TextField name="valueNote" label="Referente a" hint="Ex.: mensal, por sessão, total" defaultValue={contract?.valueNote} />
         <TextareaField name="description" label="Descrição / observações" span={4} rows={3} defaultValue={contract?.description} />
+        {!contract && (
+          <FileField
+            name="files" label="Anexos (opcional)" accept={FILE_ACCEPT} multiple span={4}
+            hint={`Contrato assinado e outros documentos: até ${MAX_FILES_PER_UPLOAD} arquivos, ${formatBytes(MAX_FILE_BYTES)} no total. Também dá para anexar depois.`}
+          />
+        )}
       </FormGrid>
       <FormActions>
         <SubmitButton>{contract ? "Salvar contrato" : "Cadastrar contrato"}</SubmitButton>

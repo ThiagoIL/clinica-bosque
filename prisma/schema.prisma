@@ -23,13 +23,11 @@ enum Sex {
   OTHER
 }
 
-enum ServiceKind {
+/// Tipo do atendimento, definido em cada lançamento (independe do serviço).
+enum AttendanceKind {
   CONSULTATION
   RETURN
   SESSION
-  THERAPY
-  EXAM
-  OTHER
 }
 
 /// Como termina a repetição de um lançamento.
@@ -252,31 +250,43 @@ model PatientNote {
 
 // ───────────────────────── Profissionais e serviços ─────────────────────────
 
+/// Especialidade (cadastro): usada no cadastro do profissional e nos filtros de agenda e lançamentos.
+model Specialty {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  professionals Professional[]
+}
+
 model Professional {
-  id             String   @id @default(cuid())
+  id             String    @id @default(cuid())
   name           String
-  specialty      String?
+  specialtyId    String?
   registryType   String? // CRM, CRP, CREFITO...
   registryNumber String?
   cpf            String?
+  birthDate      DateTime? @db.Date
   phone          String?
   email          String?
-  color          String   @default("#2f7d5b")
+  color          String    @default("#2f7d5b")
   notes          String?
-  active         Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
+  specialty    Specialty?    @relation(fields: [specialtyId], references: [id], onDelete: Restrict)
   engagements  Engagement[]
   appointments Appointment[]
 
   @@index([name])
+  @@index([specialtyId])
 }
 
 model Service {
   id                String      @id @default(cuid())
   name              String
-  kind              ServiceKind @default(SESSION)
   durationMinutes   Int         @default(50)
   active            Boolean     @default(true)
   createdAt         DateTime    @default(now())
@@ -343,6 +353,7 @@ model Engagement {
   professionalId  String
   serviceId       String
   healthPlanId    String?
+  kind            AttendanceKind   @default(SESSION)
   quantity        Int
   unitPriceCents  Int
   discountCents   Int              @default(0)

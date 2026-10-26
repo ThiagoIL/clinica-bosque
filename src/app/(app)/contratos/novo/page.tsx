@@ -19,7 +19,7 @@ export default async function NewContractPage({
     <>
       <PageHeader
         title="Novo contrato"
-        description="Depois de cadastrar, você poderá anexar o contrato assinado e outros documentos."
+        description="Anexe o contrato assinado já no cadastro (opcional); também é possível anexar depois."
         back={{ href: "/contratos", label: "Contratos" }}
       />
       {collaborators.length === 0 ? (

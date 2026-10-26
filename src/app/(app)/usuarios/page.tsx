@@ -3,9 +3,9 @@ import { db } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { formatDateTime } from "@/lib/dates";
 import { optionsOf, userRoleLabels } from "@/lib/labels";
-import { ActionForm, CheckboxField, FormActions, FormGrid, SelectField, SubmitButton, TextField } from "@/components/ui/form-kit";
+import { ActionForm, CheckboxField, DeleteButton, FormActions, FormGrid, SelectField, SubmitButton, TextField } from "@/components/ui/form-kit";
 import { Badge, Card, LinkButton, PageHeader, param } from "@/components/ui/primitives";
-import { saveUser } from "./actions";
+import { deleteUser, saveUser } from "./actions";
 
 export const metadata = { title: "Usuários" };
 
@@ -102,8 +102,14 @@ export default async function UsersPage({
                 </td>
                 <td>{u.active ? <Badge tone="green">Ativo</Badge> : <Badge>Inativo</Badge>}</td>
                 <td className="whitespace-nowrap text-muted">{u.lastLoginAt ? formatDateTime(u.lastLoginAt) : "—"}</td>
-                <td className="text-right">
+                <td className="space-x-3 whitespace-nowrap text-right">
                   <Link href={`/usuarios?edit=${u.id}`} className="text-sm text-brand-700 hover:underline">Editar</Link>
+                  {u.id !== me.id && (
+                    <DeleteButton
+                      action={deleteUser} id={u.id}
+                      message={`Excluir o usuário “${u.name}”? Ele perde o acesso ao sistema. Para manter o cadastro, desative-o em vez de excluir.`}
+                    />
+                  )}
                 </td>
               </tr>
             ))}

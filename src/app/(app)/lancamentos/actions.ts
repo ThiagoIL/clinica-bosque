@@ -17,6 +17,7 @@ const createSchema = z.object({
   patientId: selectId("o paciente"),
   professionalId: selectId("o profissional"),
   serviceId: selectId("o serviço"),
+  kind: requiredEnum(["CONSULTATION", "RETURN", "SESSION"], "Tipo do atendimento"),
   unitPrice: money("Valor unitário", { allowZero: true }),
   discount: optionalMoney(),
   recurrence: requiredEnum(["NONE", "DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY"], "Repetição"),
@@ -119,6 +120,7 @@ export async function createEngagement(_: FormState, formData: FormData): Promis
           professionalId: professional.id,
           serviceId: service.id,
           healthPlanId: patient.healthPlanId,
+          kind: d.kind,
           quantity,
           unitPriceCents: d.unitPrice,
           discountCents: discount,
@@ -210,6 +212,7 @@ const updateSchema = z.object({
   id: selectId("o lançamento"),
   professionalId: selectId("o profissional"),
   serviceId: selectId("o serviço"),
+  kind: requiredEnum(["CONSULTATION", "RETURN", "SESSION"], "Tipo do atendimento"),
   unitPrice: optionalMoney(),
   discount: optionalMoney(),
   notes: optional(1000),
@@ -294,7 +297,7 @@ export async function updateEngagement(_: FormState, formData: FormData): Promis
 
       await tx.engagement.update({
         where: { id: e.id },
-        data: { professionalId: professional.id, serviceId: service.id, notes: d.notes, ...priceData },
+        data: { professionalId: professional.id, serviceId: service.id, kind: d.kind, notes: d.notes, ...priceData },
       });
     });
     return { redirectTo: `/lancamentos/${d.id}` };
@@ -321,5 +324,35 @@ export async function cancelEngagement(_: FormState, formData: FormData): Promis
       });
     });
     return { success: "Lançamento cancelado." };
+  });
+}
+
+const deleteSchema = z.object({ id: selectId("o lançamento"), redirect: z.string().optional() });
+
+/**
+ * Exclui o lançamento com os atendimentos e cobranças dele. Barrado quando há cobrança paga:
+ * nesse caso o lançamento deve ser cancelado, para o histórico financeiro continuar íntegro.
+ */
+export async function deleteEngagement(_: FormState, formData: FormData): Promise<FormState> {
+  const parsed = parseForm(deleteSchema, formData);
+  if (parsed.state) return parsed.state;
+  const { id, redirect } = parsed.data;
+
+  return runAction("LANCAMENTOS", formData, async () => {
+    await db.$transaction(async (tx) => {
+      const e = await tx.engagement.findUnique({ where: { id }, select: { id: true, entries: { select: { status: true } } } });
+      if (!e) throw new UserError("Lançamento não encontrado.");
+      const paid = e.entries.filter((x) => x.status === "PAID").length;
+      if (paid > 0) {
+        throw new UserError(
+          `Este lançamento tem ${paid} cobrança(s) paga(s) e não pode ser excluído. Cancele o lançamento: as cobranças pagas são mantidas no financeiro.`,
+        );
+      }
+      // as relações são "SetNull": remove os filhos explicitamente, cobranças primeiro
+      await tx.financialEntry.deleteMany({ where: { engagementId: id } });
+      await tx.appointment.deleteMany({ where: { engagementId: id } });
+      await tx.engagement.delete({ where: { id } });
+    });
+    return redirect ? { redirectTo: "/lancamentos" } : { success: "Lançamento excluído." };
   });
 }
