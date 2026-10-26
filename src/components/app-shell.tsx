@@ -1,62 +1,79 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import {
-  ArrowDownCircle, ArrowUpCircle, Boxes, CalendarDays, ClipboardList, Landmark, LayoutDashboard,
-  HeartPulse, LineChart, Menu, Package, ReceiptText, ShieldCheck, Stethoscope, Tags, Truck, UserCog, Users, Wallet, X,
+  ChevronRight, ClipboardList, Handshake, LayoutDashboard, Menu, Package, ShieldCheck, Stethoscope, Wallet, X,
   type LucideIcon,
 } from "lucide-react";
 import { ReadOnlyProvider } from "@/components/ui/form-kit";
 import { moduleForPath, type Access, type Level, type ModuleKey } from "@/lib/modules";
 
-type NavItem = { href: string; label: string; icon: LucideIcon; access?: Access };
-type NavGroup = { title?: string; items: NavItem[] };
+type NavItem = { href: string; label: string; access?: Access };
+type NavGroup = { id: string; title: string; icon: LucideIcon; items: NavItem[] };
 
+/** Menu agrupado por categoria: cada categoria abre e fecha, como no ERP. */
 const NAV: NavGroup[] = [
-  { items: [{ href: "/", label: "Início", icon: LayoutDashboard }] },
   {
+    id: "atendimento",
     title: "Atendimento",
+    icon: Stethoscope,
     items: [
-      { href: "/agenda", label: "Agenda", icon: CalendarDays, access: "AGENDA" },
-      { href: "/lancamentos", label: "Lançamentos", icon: ClipboardList, access: "LANCAMENTOS" },
-      { href: "/pacientes", label: "Pacientes", icon: Users, access: "PACIENTES" },
-      { href: "/profissionais", label: "Profissionais", icon: Stethoscope, access: "PROFISSIONAIS" },
+      { href: "/agenda", label: "Agenda", access: "AGENDA" },
+      { href: "/lancamentos", label: "Lançamentos", access: "LANCAMENTOS" },
+      { href: "/pacientes", label: "Pacientes", access: "PACIENTES" },
+      { href: "/profissionais", label: "Profissionais", access: "PROFISSIONAIS" },
     ],
   },
   {
+    id: "financeiro",
     title: "Financeiro",
+    icon: Wallet,
     items: [
-      { href: "/financeiro/receber", label: "Contas a receber", icon: ArrowDownCircle, access: "FINANCEIRO" },
-      { href: "/financeiro/pagar", label: "Contas a pagar", icon: ArrowUpCircle, access: "FINANCEIRO" },
-      { href: "/financeiro/extrato", label: "Extrato", icon: Wallet, access: "FINANCEIRO" },
-      { href: "/financeiro/fluxo", label: "Fluxo de caixa", icon: LineChart, access: "FINANCEIRO" },
+      { href: "/financeiro/receber", label: "Contas a receber", access: "FINANCEIRO" },
+      { href: "/financeiro/pagar", label: "Contas a pagar", access: "FINANCEIRO" },
+      { href: "/financeiro/extrato", label: "Extrato", access: "FINANCEIRO" },
+      { href: "/financeiro/fluxo", label: "Fluxo de caixa", access: "FINANCEIRO" },
+      { href: "/financeiro/contas", label: "Contas e categorias", access: "FINANCEIRO" },
     ],
   },
   {
+    id: "estoque",
     title: "Estoque",
+    icon: Package,
     items: [
-      { href: "/estoque", label: "Itens e saldo", icon: Package, access: "ESTOQUE" },
-      { href: "/estoque/movimentacoes", label: "Movimentações", icon: Boxes, access: "ESTOQUE" },
+      { href: "/estoque", label: "Itens e saldo", access: "ESTOQUE" },
+      { href: "/estoque/movimentacoes", label: "Movimentações", access: "ESTOQUE" },
     ],
   },
   {
+    id: "cadastros",
     title: "Cadastros",
+    icon: ClipboardList,
     items: [
-      { href: "/servicos", label: "Serviços", icon: Tags, access: "CADASTROS" },
-      { href: "/planos", label: "Planos de saúde", icon: HeartPulse, access: "CADASTROS" },
-      { href: "/precos", label: "Tabela de preços", icon: ReceiptText, access: "CADASTROS" },
-      { href: "/fornecedores", label: "Fornecedores", icon: Truck, access: "CADASTROS" },
-      { href: "/financeiro/contas", label: "Contas e categorias", icon: Landmark, access: "FINANCEIRO" },
+      { href: "/servicos", label: "Serviços", access: "CADASTROS" },
+      { href: "/planos", label: "Planos de saúde", access: "CADASTROS" },
+      { href: "/precos", label: "Tabela de preços", access: "CADASTROS" },
     ],
   },
   {
-    title: "Administração",
+    id: "colaboradores",
+    title: "Colaboradores",
+    icon: Handshake,
     items: [
-      { href: "/usuarios", label: "Usuários", icon: UserCog, access: "ADMIN" },
-      { href: "/perfis", label: "Perfis de acesso", icon: ShieldCheck, access: "ADMIN" },
+      { href: "/colaboradores", label: "Colaboradores", access: "CONTRATOS" },
+      { href: "/contratos", label: "Contratos", access: "CONTRATOS" },
+    ],
+  },
+  {
+    id: "administracao",
+    title: "Administração",
+    icon: ShieldCheck,
+    items: [
+      { href: "/usuarios", label: "Usuários", access: "ADMIN" },
+      { href: "/perfis", label: "Perfis de acesso", access: "ADMIN" },
     ],
   },
 ];
@@ -79,36 +96,71 @@ export function AppShell({ children, footer, access }: { children: ReactNode; fo
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
+  // Categorias abertas: a da tela atual abre sozinha; as demais o usuário abre e fecha.
+  const activeGroup = groups.find((g) => g.items.some((i) => isActive(i.href)))?.id;
+  const [openGroups, setOpenGroups] = useState<string[]>(activeGroup ? [activeGroup] : []);
+  useEffect(() => {
+    if (activeGroup) setOpenGroups((cur) => (cur.includes(activeGroup) ? cur : [...cur, activeGroup]));
+  }, [activeGroup]);
+  const toggle = (id: string) =>
+    setOpenGroups((cur) => (cur.includes(id) ? cur.filter((g) => g !== id) : [...cur, id]));
+
   const nav = (
-    <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
-      {groups.map((group, i) => (
-        <div key={i}>
-          {group.title && (
-            <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted">
-              {group.title}
-            </p>
-          )}
-          <ul className="space-y-0.5">
-            {group.items.map(({ href, label, icon: Icon }) => (
-              <li key={href}>
-                <Link
-                  href={href}
-                  onClick={() => setOpen(false)}
-                  className={clsx(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                    isActive(href)
-                      ? "bg-white font-medium text-brand-800 shadow-xs ring-1 ring-black/5"
-                      : "text-ink/75 hover:bg-black/5 hover:text-ink",
-                  )}
-                >
-                  <Icon className={clsx("size-4 shrink-0", isActive(href) && "text-accent-600")} />
-                  {label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+    <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      <Link
+        href="/"
+        onClick={() => setOpen(false)}
+        className={clsx(
+          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+          isActive("/") ? "bg-white font-medium text-brand-800 shadow-xs ring-1 ring-black/5" : "text-ink/80 hover:bg-black/5 hover:text-ink",
+        )}
+      >
+        <LayoutDashboard className={clsx("size-4 shrink-0", isActive("/") && "text-accent-600")} />
+        Início
+      </Link>
+
+      {groups.map((group) => {
+        const expanded = openGroups.includes(group.id);
+        const hasActive = group.id === activeGroup;
+        const Icon = group.icon;
+        return (
+          <div key={group.id}>
+            <button
+              type="button"
+              onClick={() => toggle(group.id)}
+              aria-expanded={expanded}
+              className={clsx(
+                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors hover:bg-black/5",
+                hasActive ? "font-medium text-ink" : "text-ink/80",
+              )}
+            >
+              <Icon className={clsx("size-4 shrink-0", hasActive && "text-accent-600")} />
+              <span className="flex-1">{group.title}</span>
+              <ChevronRight className={clsx("size-4 shrink-0 text-muted transition-transform", expanded && "rotate-90")} />
+            </button>
+            {expanded && (
+              <ul className="mb-1 ml-5 mt-0.5 space-y-0.5 border-l border-black/10 pl-3">
+                {group.items.map(({ href, label }) => (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      onClick={() => setOpen(false)}
+                      className={clsx(
+                        "block rounded-lg px-3 py-1.5 text-sm transition-colors",
+                        isActive(href)
+                          ? "bg-white font-medium text-brand-800 shadow-xs ring-1 ring-black/5"
+                          : "text-ink/70 hover:bg-black/5 hover:text-ink",
+                      )}
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })}
     </nav>
   );
 

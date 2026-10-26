@@ -20,7 +20,7 @@ const createSchema = z.object({
   dueDate: dateField("Vencimento"),
   categoryId: optionalId(),
   patientId: optionalId(),
-  supplierId: optionalId(),
+  collaboratorId: optionalId(),
   installments: integer("Parcelas", 1, 60),
   notes: optional(1000),
   paidNow: checkbox(),
@@ -51,7 +51,7 @@ export async function createEntry(_: FormState, formData: FormData): Promise<For
         dueDate: dateOnly(addMonths(baseDue, i)),
         categoryId: d.categoryId,
         patientId: d.kind === "INCOME" ? d.patientId : null,
-        supplierId: d.kind === "EXPENSE" ? d.supplierId : null,
+        collaboratorId: d.kind === "EXPENSE" ? d.collaboratorId : null,
         installmentNumber: d.installments > 1 ? i + 1 : null,
         installmentTotal: d.installments > 1 ? d.installments : null,
         notes: d.notes,
@@ -77,7 +77,7 @@ const updateSchema = z.object({
   dueDate: dateField("Vencimento"),
   categoryId: optionalId(),
   patientId: optionalId(),
-  supplierId: optionalId(),
+  collaboratorId: optionalId(),
   notes: optional(1000),
 });
 
@@ -97,7 +97,7 @@ export async function updateEntry(_: FormState, formData: FormData): Promise<For
         dueDate: dateOnly(d.dueDate),
         categoryId: d.categoryId,
         patientId: entry.kind === "INCOME" ? d.patientId : null,
-        supplierId: entry.kind === "EXPENSE" ? d.supplierId : null,
+        collaboratorId: entry.kind === "EXPENSE" ? d.collaboratorId : null,
         notes: d.notes,
       },
     });

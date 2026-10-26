@@ -411,6 +411,27 @@ export function PriceInput({ name, defaultValue, placeholder = "—" }: { name: 
   );
 }
 
+/** Seleção de arquivo(s) para envio junto com o formulário. */
+export function FileField({
+  name, label, accept, multiple, hint, span, required,
+}: { name: string; label: string; accept?: string; multiple?: boolean; hint?: string; span?: Span; required?: boolean }) {
+  const error = useFieldError(name);
+  const ro = useReadOnly();
+  return (
+    <FieldShell label={label} name={name} error={error} hint={hint} required={required} span={span}>
+      <input
+        id={name}
+        name={name}
+        type="file"
+        accept={accept}
+        multiple={multiple}
+        disabled={ro}
+        className="block w-full rounded-lg border border-line bg-surface text-sm text-muted file:mr-3 file:cursor-pointer file:border-0 file:bg-brand-600 file:px-3.5 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-brand-700"
+      />
+    </FieldShell>
+  );
+}
+
 export function CheckboxField({
   name, label, defaultChecked, hint, span,
 }: { name: string; label: string; defaultChecked?: boolean; hint?: string; span?: Span }) {

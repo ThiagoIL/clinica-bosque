@@ -21,7 +21,7 @@ export default async function NewEntryPage({ params }: { params: Promise<{ kind:
     getFinanceOptions(kind),
     income
       ? db.patient.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } })
-      : db.supplier.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+      : db.collaborator.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
 
   return (
@@ -49,7 +49,7 @@ export default async function NewEntryPage({ params }: { params: Promise<{ kind:
               />
             ) : (
               <SelectField
-                name="supplierId" label="Fornecedor"
+                name="collaboratorId" label="Colaborador / fornecedor"
                 options={parties.map((p) => ({ value: p.id, label: p.name }))}
               />
             )}

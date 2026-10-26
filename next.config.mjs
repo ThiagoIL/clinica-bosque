@@ -9,6 +9,15 @@ const securityHeaders = [
 const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  experimental: {
+    // anexos de contratos (até 10 MB por envio, com folga para o multipart)
+    serverActions: { bodySizeLimit: "12mb" },
+    proxyClientMaxBodySize: "12mb",
+  },
+  async redirects() {
+    // "Fornecedores" foi substituído por "Colaboradores"
+    return [{ source: "/fornecedores", destination: "/colaboradores", permanent: true }];
+  },
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },

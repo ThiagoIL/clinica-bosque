@@ -33,7 +33,7 @@ export default async function StatementPage({
       include: {
         account: { select: { name: true } },
         patient: { select: { name: true } },
-        supplier: { select: { name: true } },
+        collaborator: { select: { name: true } },
       },
     }),
   ]);
@@ -108,7 +108,7 @@ export default async function StatementPage({
                     >
                       {e.description}
                     </Link>
-                    <p className="text-xs text-muted">{e.patient?.name ?? e.supplier?.name ?? ""}</p>
+                    <p className="text-xs text-muted">{e.patient?.name ?? e.collaborator?.name ?? ""}</p>
                   </td>
                   <td>{e.account?.name ?? "—"}</td>
                   <td>{e.paymentMethod ? paymentMethodLabels[e.paymentMethod] : "—"}</td>

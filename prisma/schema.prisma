@@ -427,9 +427,13 @@ model FinancialCategory {
   @@unique([name, kind])
 }
 
-model Supplier {
+/// Colaborador / fornecedor: pessoa ou empresa que presta serviço ou fornece produtos à clínica.
+/// É o favorecido das contas a pagar e pode ter contratos com anexos.
+model Collaborator {
   id        String   @id @default(cuid())
   name      String
+  /// Função ou tipo de serviço (ex.: "Médico PJ", "Limpeza", "Fornecedor de materiais")
+  role      String?
   document  String?
   phone     String?
   email     String?
@@ -439,6 +443,52 @@ model Supplier {
 
   entries   FinancialEntry[]
   movements StockMovement[]
+  contracts Contract[]
+}
+
+enum ContractStatus {
+  ACTIVE
+  ENDED
+}
+
+/// Contrato com um colaborador. "Vigente" = ACTIVE; encerrado manualmente = ENDED.
+/// Contratos ACTIVE com data final no passado aparecem como vencidos, aguardando renovação ou encerramento.
+model Contract {
+  id             String         @id @default(cuid())
+  collaboratorId String
+  title          String
+  code           String?
+  description    String?
+  startDate      DateTime       @db.Date
+  endDate        DateTime?      @db.Date
+  valueCents     Int?
+  valueNote      String?
+  status         ContractStatus @default(ACTIVE)
+  endedOn        DateTime?      @db.Date
+  endReason      String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  collaborator Collaborator    @relation(fields: [collaboratorId], references: [id], onDelete: Restrict)
+  files        ContractFile[]
+
+  @@index([status, endDate])
+  @@index([collaboratorId])
+}
+
+/// Anexo de contrato, guardado no próprio banco (o disco do container não é persistente).
+model ContractFile {
+  id         String   @id @default(cuid())
+  contractId String
+  fileName   String
+  mimeType   String
+  sizeBytes  Int
+  data       Bytes
+  createdAt  DateTime @default(now())
+
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
 }
 
 /// Contas a receber (INCOME) e contas a pagar (EXPENSE).
@@ -456,7 +506,7 @@ model FinancialEntry {
   accountId         String?
   categoryId        String?
   patientId         String?
-  supplierId        String?
+  collaboratorId    String?
   engagementId      String?
   appointmentId     String?
   installmentNumber Int?
@@ -468,7 +518,7 @@ model FinancialEntry {
   account     FinancialAccount?  @relation(fields: [accountId], references: [id], onDelete: SetNull)
   category    FinancialCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   patient     Patient?           @relation(fields: [patientId], references: [id], onDelete: SetNull)
-  supplier    Supplier?          @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  collaborator Collaborator?     @relation(fields: [collaboratorId], references: [id], onDelete: SetNull)
   engagement  Engagement?        @relation(fields: [engagementId], references: [id], onDelete: SetNull)
   appointment Appointment?       @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
   movement    StockMovement?
@@ -508,14 +558,14 @@ model StockMovement {
   quantity      Int
   balanceAfter  Int
   unitCostCents Int?
-  supplierId    String?
+  collaboratorId String?
   entryId       String?           @unique
   reason        String?
   occurredOn    DateTime          @db.Date
   createdAt     DateTime          @default(now())
 
   item     StockItem        @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  supplier Supplier?        @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  collaborator Collaborator?    @relation(fields: [collaboratorId], references: [id], onDelete: SetNull)
   entry    FinancialEntry?  @relation(fields: [entryId], references: [id], onDelete: SetNull)
 
   @@index([itemId, occurredOn])

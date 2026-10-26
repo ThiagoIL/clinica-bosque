@@ -9,6 +9,7 @@ import { appointmentTone } from "@/lib/status";
 import { getAccess, requireUser } from "@/lib/auth";
 import { levelOf } from "@/lib/access";
 import type { ModuleKey } from "@/lib/modules";
+import { EXPIRING_DAYS } from "@/lib/contracts";
 import { Badge, Card, LinkButton, PageHeader, Stat, param } from "@/components/ui/primitives";
 
 export const metadata = { title: "Início" };
@@ -31,7 +32,7 @@ export default async function DashboardPage({
   const sum = (r: { _sum: { amountCents: number | null } }) => r._sum.amountCents ?? 0;
 
   // Só consulta o que o usuário pode ver.
-  const [appointmentsToday, upcomingCount, patientCount, finance, stockItems] = await Promise.all([
+  const [appointmentsToday, upcomingCount, patientCount, finance, stockItems, contractAlerts] = await Promise.all([
     can("AGENDA")
       ? db.appointment.findMany({
           where: { startsAt: { gte: zoned(today, "00:00"), lt: zoned(addDays(today, 1), "00:00") }, status: { not: "CANCELED" } },
@@ -60,11 +61,15 @@ export default async function DashboardPage({
         ])
       : null,
     can("ESTOQUE") ? db.stockItem.findMany({ where: { active: true }, orderBy: { name: "asc" } }) : [],
+    // contratos ativos que vencem em até 30 dias ou já venceram sem serem encerrados
+    can("CONTRATOS")
+      ? db.contract.count({ where: { status: "ACTIVE", endDate: { lte: dateOnly(addDays(today, EXPIRING_DAYS)) } } })
+      : 0,
   ]);
 
   const lowStock = stockItems.filter((i) => i.quantity <= i.minQuantity);
   const monthName = monthTitle(today).split(" de ")[0];
-  const hasAnyModule = (["AGENDA", "PACIENTES", "FINANCEIRO", "ESTOQUE"] as ModuleKey[]).some(can);
+  const hasAnyModule = (["AGENDA", "PACIENTES", "FINANCEIRO", "ESTOQUE", "CONTRATOS"] as ModuleKey[]).some(can);
 
   return (
     <>
@@ -86,7 +91,7 @@ export default async function DashboardPage({
         </p>
       )}
 
-      {(can("AGENDA") || can("PACIENTES") || can("ESTOQUE")) && (
+      {(can("AGENDA") || can("PACIENTES") || can("ESTOQUE") || can("CONTRATOS")) && (
         <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {can("AGENDA") && (
             <>
@@ -95,6 +100,15 @@ export default async function DashboardPage({
             </>
           )}
           {can("PACIENTES") && <Stat label="Pacientes ativos" value={patientCount} href="/pacientes" />}
+          {can("CONTRATOS") && (
+            <Stat
+              label="Contratos a vencer"
+              value={contractAlerts}
+              hint={`vencem em ${EXPIRING_DAYS} dias ou já vencidos`}
+              tone={contractAlerts ? "warn" : "default"}
+              href="/contratos?status=attention"
+            />
+          )}
           {can("ESTOQUE") && (
             <Stat label="Itens para repor" value={lowStock.length} tone={lowStock.length ? "bad" : "default"} href="/estoque?low=1" />
           )}

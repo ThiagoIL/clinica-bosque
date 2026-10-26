@@ -59,10 +59,10 @@ async function main() {
     ],
   });
 
-  await db.supplier.createMany({
+  await db.collaborator.createMany({
     data: [
-      { name: "Papelaria Central", phone: "1133334444" },
-      { name: "MedSupply Distribuidora", phone: "1144445555", email: "vendas@medsupply.example" },
+      { name: "Papelaria Central", role: "Fornecedor de materiais", phone: "1133334444" },
+      { name: "MedSupply Distribuidora", role: "Fornecedor de materiais", phone: "1144445555", email: "vendas@medsupply.example" },
     ],
   });
 

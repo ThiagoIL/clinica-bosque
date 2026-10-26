@@ -43,7 +43,7 @@ export default async function EntriesPage({
     kind,
     ...(from || to ? { dueDate: { ...(from ? { gte: dateOnly(from) } : {}), ...(to ? { lte: dateOnly(to) } : {}) } } : {}),
     ...(q ? { description: { contains: q, mode: "insensitive" } } : {}),
-    ...(partyId ? (income ? { patientId: partyId } : { supplierId: partyId }) : {}),
+    ...(partyId ? (income ? { patientId: partyId } : { collaboratorId: partyId }) : {}),
   };
 
   const statusWhere: Prisma.FinancialEntryWhereInput =
@@ -65,14 +65,14 @@ export default async function EntriesPage({
       orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      include: { patient: { select: { name: true } }, supplier: { select: { name: true } }, category: { select: { name: true } } },
+      include: { patient: { select: { name: true } }, collaborator: { select: { name: true } }, category: { select: { name: true } } },
     }),
     db.financialEntry.count({ where }),
     db.financialEntry.groupBy({ by: ["status"], where: base, _sum: { amountCents: true, paidAmountCents: true } }),
     db.financialEntry.aggregate({ where: { AND: [base, { status: "PENDING", dueDate: { lt: today } }] }, _sum: { amountCents: true } }),
     income
       ? db.patient.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } })
-      : db.supplier.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+      : db.collaborator.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
 
   const pending = byStatus.find((s) => s.status === "PENDING")?._sum.amountCents ?? 0;
@@ -86,7 +86,7 @@ export default async function EntriesPage({
         description={
           income
             ? "Cobranças geradas pelos atendimentos e demais receitas."
-            : "Despesas, fornecedores e compromissos da clínica."
+            : "Despesas, colaboradores, fornecedores e compromissos da clínica."
         }
         actions={
           <LinkButton href={`/financeiro/${slug}/novo`}>
@@ -117,7 +117,7 @@ export default async function EntriesPage({
         <FilterField label="até">
           <input type="date" name="to" defaultValue={to} className="input" />
         </FilterField>
-        <FilterField label={income ? "Paciente" : "Fornecedor"}>
+        <FilterField label={income ? "Paciente" : "Colaborador / fornecedor"}>
           <select name="party" defaultValue={partyId} className="input">
             <option value="">Todos</option>
             {parties.map((p) => (
@@ -139,7 +139,7 @@ export default async function EntriesPage({
               <tr>
                 <th>Vencimento</th>
                 <th>Descrição</th>
-                <th>{income ? "Paciente" : "Fornecedor"}</th>
+                <th>{income ? "Paciente" : "Colaborador / fornecedor"}</th>
                 <th>Categoria</th>
                 <th className="text-right">Valor</th>
                 <th>Situação</th>
@@ -153,7 +153,7 @@ export default async function EntriesPage({
                   <tr key={e.id}>
                     <td className="whitespace-nowrap">{formatDate(e.dueDate)}</td>
                     <td className="font-medium">{e.description}</td>
-                    <td>{(income ? e.patient?.name : e.supplier?.name) ?? "—"}</td>
+                    <td>{(income ? e.patient?.name : e.collaborator?.name) ?? "—"}</td>
                     <td>{e.category?.name ?? "—"}</td>
                     <td className="text-right tabular-nums">{formatMoney(e.amountCents)}</td>
                     <td>

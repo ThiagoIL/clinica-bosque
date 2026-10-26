@@ -17,6 +17,7 @@ lançamento de consultas/sessões/terapias com agendamento recorrente, agenda co
 | **Lançamentos** | Seleciona paciente, profissional, tipo/serviço, valor e a repetição (diária, semanal, quinzenal, mensal) com **dias da semana** à escolha e término por **quantidade de sessões, data ou mês**. Gera todos os agendamentos e o financeiro (por sessão, pacote único ou parcelado). Lançamentos de **retorno** têm tipo próprio. Pode ser **editado** depois. |
 | **Agenda** | Visões dia/semana/mês; filtros por profissional e paciente; confirmar, marcar realizado/faltou, cancelar e reagendar. |
 | **Financeiro** | Contas a receber e a pagar (com parcelamento e baixa), extrato por conta com saldo corrido e fluxo de caixa (realizado × previsto). |
+| **Colaboradores e contratos** | Cadastro de colaboradores/fornecedores (favorecidos das contas a pagar) e **gestão de contratos**: ativos, a vencer, vencidos e encerrados, com **anexos** (PDF, imagens, Word, Excel…). O painel inicial avisa dos contratos que vencem em 30 dias. |
 | **Estoque** | Itens, saldo mínimo, entradas/saídas/ajustes; compra pode gerar conta a pagar. **Desligado por padrão**: só aparece se o fornecedor liberar o módulo. |
 | **Usuários e perfis de acesso** | O *Administrador da empresa* tem acesso total aos módulos liberados e gerencia usuários. Os demais usuários seguem um **perfil de acesso**, que define por módulo: sem acesso, *Consulta* (só vê) ou *Edita*. Cada usuário altera a própria senha em *Minha conta*. |
 
