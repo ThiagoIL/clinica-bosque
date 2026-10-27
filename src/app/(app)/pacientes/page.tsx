@@ -80,6 +80,7 @@ export default async function PatientsPage({
                 <th>Telefone</th>
                 <th>Plano</th>
                 <th>Situação</th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -94,6 +95,9 @@ export default async function PatientsPage({
                   <td>{formatPhone(p.phone) || "—"}</td>
                   <td>{p.healthPlan?.name ?? "—"}</td>
                   <td>{p.active ? <Badge tone="green">Ativo</Badge> : <Badge>Inativo</Badge>}</td>
+                  <td className="text-right">
+                    <Link href={`/pacientes/${p.id}`} className="text-sm text-brand-700 hover:underline">Editar</Link>
+                  </td>
                 </tr>
               ))}
             </tbody>

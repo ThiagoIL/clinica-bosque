@@ -73,6 +73,16 @@ export default async function UsersPage({
             <FormActions>
               <SubmitButton>Salvar</SubmitButton>
               <LinkButton href="/usuarios" variant="outline">Cancelar</LinkButton>
+              {editing && editing.id !== me.id && (
+                <span className="ml-auto">
+                  <DeleteButton
+                    action={deleteUser} id={editing.id}
+                    message={`Excluir o usuário “${editing.name}”? Ele perde o acesso ao sistema. Para manter o cadastro, desative-o em vez de excluir.`}
+                  >
+                    Excluir usuário
+                  </DeleteButton>
+                </span>
+              )}
             </FormActions>
           </ActionForm>
         </Card>
@@ -87,7 +97,8 @@ export default async function UsersPage({
             {users.map((u) => (
               <tr key={u.id}>
                 <td className="font-medium">
-                  {u.name} {u.id === me.id && <span className="text-xs text-muted">(você)</span>}
+                  <Link href={`/usuarios?edit=${u.id}`} className="text-brand-800 hover:underline">{u.name}</Link>{" "}
+                  {u.id === me.id && <span className="text-xs text-muted">(você)</span>}
                 </td>
                 <td>{u.email}</td>
                 <td>{userRoleLabels[u.role]}</td>
@@ -102,14 +113,8 @@ export default async function UsersPage({
                 </td>
                 <td>{u.active ? <Badge tone="green">Ativo</Badge> : <Badge>Inativo</Badge>}</td>
                 <td className="whitespace-nowrap text-muted">{u.lastLoginAt ? formatDateTime(u.lastLoginAt) : "—"}</td>
-                <td className="space-x-3 whitespace-nowrap text-right">
+                <td className="whitespace-nowrap text-right">
                   <Link href={`/usuarios?edit=${u.id}`} className="text-sm text-brand-700 hover:underline">Editar</Link>
-                  {u.id !== me.id && (
-                    <DeleteButton
-                      action={deleteUser} id={u.id}
-                      message={`Excluir o usuário “${u.name}”? Ele perde o acesso ao sistema. Para manter o cadastro, desative-o em vez de excluir.`}
-                    />
-                  )}
                 </td>
               </tr>
             ))}

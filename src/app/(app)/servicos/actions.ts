@@ -54,6 +54,6 @@ export async function deleteService(_: FormState, formData: FormData): Promise<F
     }
     // os preços da tabela do serviço são removidos junto (cascade)
     await db.service.delete({ where: { id } });
-    return { success: "Serviço excluído." };
+    return { redirectTo: "/servicos" };
   });
 }

@@ -88,6 +88,6 @@ export async function deleteUser(_: FormState, formData: FormData): Promise<Form
     }
     // as anotações de pacientes escritas por ele ficam sem autor
     await db.user.delete({ where: { id } });
-    return { success: "Usuário excluído." };
+    return { redirectTo: "/usuarios" };
   });
 }

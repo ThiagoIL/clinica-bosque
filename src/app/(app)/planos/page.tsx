@@ -46,6 +46,7 @@ export default async function HealthPlansPage({
             <FormActions>
               <SubmitButton>Salvar</SubmitButton>
               <LinkButton href="/planos" variant="outline">Cancelar</LinkButton>
+              {editing && <LinkButton href={`/precos?plan=${editing.id}`} variant="outline">Tabela de preços</LinkButton>}
             </FormActions>
           </ActionForm>
         </Card>
@@ -60,13 +61,13 @@ export default async function HealthPlansPage({
             {plans.map((p) => (
               <tr key={p.id}>
                 <td className="font-medium">
-                  {p.name} {p.isDefault && <Badge tone="violet">Padrão</Badge>}
+                  <Link href={`/planos?edit=${p.id}`} className="text-brand-800 hover:underline">{p.name}</Link>{" "}
+                  {p.isDefault && <Badge tone="violet">Padrão</Badge>}
                 </td>
                 <td className="tabular-nums">{p._count.patients}</td>
                 <td className="tabular-nums">{p._count.servicePrices}</td>
                 <td>{p.active ? <Badge tone="green">Ativo</Badge> : <Badge>Inativo</Badge>}</td>
-                <td className="space-x-3 text-right text-sm">
-                  <Link href={`/precos?plan=${p.id}`} className="text-brand-700 hover:underline">Tabela de preços</Link>
+                <td className="text-right text-sm">
                   <Link href={`/planos?edit=${p.id}`} className="text-brand-700 hover:underline">Editar</Link>
                 </td>
               </tr>

@@ -43,6 +43,6 @@ export async function deleteSpecialty(_: FormState, formData: FormData): Promise
       );
     }
     await db.specialty.delete({ where: { id } });
-    return { success: "Especialidade excluída." };
+    return { redirectTo: "/especialidades" };
   });
 }

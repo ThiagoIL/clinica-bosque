@@ -3,9 +3,9 @@ import { db } from "@/lib/db";
 import { centsToInput, formatMoney } from "@/lib/money";
 import { formatDateTime } from "@/lib/dates";
 import { WEEKDAY_OPTIONS, attendanceKindLabels, billingModeLabels, optionsOf, recurrenceLabels } from "@/lib/labels";
-import { ActionForm, FormActions, FormGrid, SelectField, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
+import { ActionForm, DeleteButton, FormActions, FormGrid, SelectField, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
 import { Card, LinkButton, PageHeader } from "@/components/ui/primitives";
-import { updateEngagement } from "../../actions";
+import { deleteEngagement, updateEngagement } from "../../actions";
 
 export const metadata = { title: "Editar lançamento" };
 
@@ -83,6 +83,14 @@ export default async function EditEngagementPage({ params }: { params: Promise<{
             <FormActions>
               <SubmitButton>Salvar alterações</SubmitButton>
               <LinkButton href={`/lancamentos/${id}`} variant="outline">Cancelar</LinkButton>
+              <span className="ml-auto">
+                <DeleteButton
+                  action={deleteEngagement} id={e.id} fields={{ redirect: "1" }}
+                  message={`Excluir o lançamento #${e.number} de ${e.patient.name}? Os ${e.appointments.length} atendimento(s) e as cobranças dele serão removidos. Para manter o histórico, use “Cancelar lançamento”.`}
+                >
+                  Excluir lançamento
+                </DeleteButton>
+              </span>
             </FormActions>
           </ActionForm>
         </Card>

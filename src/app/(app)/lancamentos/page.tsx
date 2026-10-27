@@ -6,9 +6,7 @@ import { formatMoney } from "@/lib/money";
 import { formatDateTime } from "@/lib/dates";
 import { attendanceKindLabels, engagementStatusLabels, recurrenceLabels, optionsOf } from "@/lib/labels";
 import { engagementTone } from "@/lib/status";
-import { DeleteButton } from "@/components/ui/form-kit";
 import { Badge, EmptyState, FilterBar, FilterField, LinkButton, PageHeader, Pagination, param } from "@/components/ui/primitives";
-import { deleteEngagement } from "./actions";
 
 export const metadata = { title: "Lançamentos" };
 const PAGE_SIZE = 20;
@@ -135,14 +133,13 @@ export default async function EngagementsPage({
                   <td className="tabular-nums">{e.quantity}</td>
                   <td className="text-right tabular-nums">{formatMoney(e.totalCents)}</td>
                   <td><Badge tone={engagementTone(e.status)}>{engagementStatusLabels[e.status]}</Badge></td>
-                  <td className="space-x-3 whitespace-nowrap text-right">
-                    {e.status !== "CANCELED" && (
-                      <Link href={`/lancamentos/${e.id}/editar`} className="text-sm text-brand-700 hover:underline">Editar</Link>
-                    )}
-                    <DeleteButton
-                      action={deleteEngagement} id={e.id}
-                      message={`Excluir o lançamento #${e.number} de ${e.patient.name}? Os ${e.quantity} atendimento(s) e as cobranças dele serão removidos. Para manter o histórico, use “Cancelar lançamento”.`}
-                    />
+                  <td className="whitespace-nowrap text-right">
+                    <Link
+                      href={e.status === "CANCELED" ? `/lancamentos/${e.id}` : `/lancamentos/${e.id}/editar`}
+                      className="text-sm text-brand-700 hover:underline"
+                    >
+                      Editar
+                    </Link>
                   </td>
                 </tr>
               ))}

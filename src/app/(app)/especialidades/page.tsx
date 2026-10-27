@@ -43,6 +43,16 @@ export default async function SpecialtiesPage({
             <FormActions>
               <SubmitButton>Salvar</SubmitButton>
               <LinkButton href="/especialidades" variant="outline">Cancelar</LinkButton>
+              {editing && (
+                <span className="ml-auto">
+                  <DeleteButton
+                    action={deleteSpecialty} id={editing.id}
+                    message={`Excluir a especialidade “${editing.name}”?`}
+                  >
+                    Excluir especialidade
+                  </DeleteButton>
+                </span>
+              )}
             </FormActions>
           </ActionForm>
         </Card>
@@ -63,12 +73,13 @@ export default async function SpecialtiesPage({
             <tbody>
               {specialties.map((s) => (
                 <tr key={s.id}>
-                  <td className="font-medium">{s.name}</td>
+                  <td className="font-medium">
+                    <Link href={`/especialidades?edit=${s.id}`} className="text-brand-800 hover:underline">{s.name}</Link>
+                  </td>
                   <td className="tabular-nums">{s._count.professionals}</td>
                   <td>{s.active ? <Badge tone="green">Ativa</Badge> : <Badge>Inativa</Badge>}</td>
-                  <td className="space-x-3 text-right">
+                  <td className="text-right">
                     <Link href={`/especialidades?edit=${s.id}`} className="text-sm text-brand-700 hover:underline">Editar</Link>
-                    <DeleteButton action={deleteSpecialty} id={s.id} message={`Excluir a especialidade “${s.name}”?`} />
                   </td>
                 </tr>
               ))}

@@ -62,6 +62,12 @@ export default async function CollaboratorsPage({
             <FormActions>
               <SubmitButton>Salvar</SubmitButton>
               <LinkButton href="/colaboradores" variant="outline">Cancelar</LinkButton>
+              {editing && (
+                <>
+                  <LinkButton href={`/contratos?collaborator=${editing.id}&status=all`} variant="outline">Ver contratos</LinkButton>
+                  <LinkButton href={`/contratos/novo?collaborator=${editing.id}`} variant="outline">Novo contrato</LinkButton>
+                </>
+              )}
             </FormActions>
           </ActionForm>
         </Card>
@@ -94,7 +100,9 @@ export default async function CollaboratorsPage({
                 const ended = c.contracts.length - active;
                 return (
                   <tr key={c.id}>
-                    <td className="font-medium">{c.name}</td>
+                    <td className="font-medium">
+                      <Link href={`/colaboradores?edit=${c.id}`} className="text-brand-800 hover:underline">{c.name}</Link>
+                    </td>
                     <td>{c.role ?? "—"}</td>
                     <td>{c.document ?? "—"}</td>
                     <td>{formatPhone(c.phone) || "—"}</td>
@@ -105,8 +113,7 @@ export default async function CollaboratorsPage({
                       </Link>
                     </td>
                     <td>{c.active ? <Badge tone="green">Ativo</Badge> : <Badge>Inativo</Badge>}</td>
-                    <td className="space-x-3 text-right text-sm">
-                      <Link href={`/contratos/novo?collaborator=${c.id}`} className="text-brand-700 hover:underline">Novo contrato</Link>
+                    <td className="text-right text-sm">
                       <Link href={`/colaboradores?edit=${c.id}`} className="text-brand-700 hover:underline">Editar</Link>
                     </td>
                   </tr>

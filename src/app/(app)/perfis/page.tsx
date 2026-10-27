@@ -96,7 +96,9 @@ export default async function AccessProfilesPage({
                 const perms = parsePermissions(p.permissions);
                 return (
                   <tr key={p.id}>
-                    <td className="font-medium">{p.name}</td>
+                    <td className="font-medium">
+                      <Link href={`/perfis?edit=${p.id}`} className="text-brand-800 hover:underline">{p.name}</Link>
+                    </td>
                     {modules.map((m) => {
                       const level = perms[m.key] ?? "NONE";
                       return (

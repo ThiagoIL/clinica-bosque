@@ -131,7 +131,7 @@ export default async function ContractsPage({
           <table className="table">
             <thead>
               <tr>
-                <th>Colaborador</th><th>Contrato</th><th>Vigência</th><th className="text-right">Valor</th><th>Anexos</th><th>Situação</th>
+                <th>Colaborador</th><th>Contrato</th><th>Vigência</th><th className="text-right">Valor</th><th>Anexos</th><th>Situação</th><th />
               </tr>
             </thead>
             <tbody>
@@ -160,6 +160,9 @@ export default async function ContractsPage({
                       )}
                     </td>
                     <td><Badge tone={st.tone}>{st.label}</Badge></td>
+                    <td className="text-right">
+                      <Link href={`/contratos/${c.id}`} className="text-sm text-brand-700 hover:underline">Editar</Link>
+                    </td>
                   </tr>
                 );
               })}

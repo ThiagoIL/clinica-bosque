@@ -8,6 +8,8 @@ lançamento de consultas/sessões/terapias com agendamento recorrente, agenda co
 
 ## Módulos
 
+Nas listas, a linha tem apenas o botão **Editar** (ou clique no nome). A exclusão fica dentro da tela de edição.
+
 | Módulo | O que faz |
 | --- | --- |
 | **Pacientes** | Cadastro por seções: dados do paciente, familiar/responsável, saúde, financeiro e observações (+ histórico de anotações). |

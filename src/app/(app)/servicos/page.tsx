@@ -60,6 +60,16 @@ export default async function ServicesPage({
             <FormActions>
               <SubmitButton>Salvar</SubmitButton>
               <LinkButton href="/servicos" variant="outline">Cancelar</LinkButton>
+              {editing && (
+                <span className="ml-auto">
+                  <DeleteButton
+                    action={deleteService} id={editing.id}
+                    message={`Excluir o serviço “${editing.name}” e os preços dele na tabela? Serviços já usados em lançamentos não podem ser excluídos.`}
+                  >
+                    Excluir serviço
+                  </DeleteButton>
+                </span>
+              )}
             </FormActions>
           </ActionForm>
         </Card>
@@ -76,17 +86,15 @@ export default async function ServicesPage({
             <tbody>
               {services.map((s) => (
                 <tr key={s.id}>
-                  <td className="font-medium">{s.name}</td>
+                  <td className="font-medium">
+                    <Link href={`/servicos?edit=${s.id}`} className="text-brand-800 hover:underline">{s.name}</Link>
+                  </td>
                   <td className="tabular-nums">{s.prices[0] ? formatMoney(s.prices[0].priceCents) : <span className="text-muted">sem preço</span>}</td>
                   <td className="tabular-nums">{s._count.prices}</td>
                   <td>{s.durationMinutes} min</td>
                   <td>{s.active ? <Badge tone="green">Ativo</Badge> : <Badge>Inativo</Badge>}</td>
-                  <td className="space-x-3 whitespace-nowrap text-right">
+                  <td className="whitespace-nowrap text-right">
                     <Link href={`/servicos?edit=${s.id}`} className="text-sm text-brand-700 hover:underline">Editar</Link>
-                    <DeleteButton
-                      action={deleteService} id={s.id}
-                      message={`Excluir o serviço “${s.name}” e os preços dele na tabela? Serviços já usados em lançamentos não podem ser excluídos.`}
-                    />
                   </td>
                 </tr>
               ))}

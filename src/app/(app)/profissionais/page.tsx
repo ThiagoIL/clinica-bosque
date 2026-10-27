@@ -68,6 +68,16 @@ export default async function ProfessionalsPage({
             <FormActions>
               <SubmitButton>Salvar</SubmitButton>
               <LinkButton href="/profissionais" variant="outline">Cancelar</LinkButton>
+              {editing && (
+                <span className="ml-auto">
+                  <DeleteButton
+                    action={deleteProfessional} id={editing.id}
+                    message={`Excluir o profissional “${editing.name}”? Quem já tem atendimentos não pode ser excluído; desative o cadastro nesse caso.`}
+                  >
+                    Excluir profissional
+                  </DeleteButton>
+                </span>
+              )}
             </FormActions>
           </ActionForm>
         </Card>
@@ -85,21 +95,17 @@ export default async function ProfessionalsPage({
               {professionals.map((p) => (
                 <tr key={p.id}>
                   <td>
-                    <span className="inline-flex items-center gap-2 font-medium">
+                    <Link href={`/profissionais?edit=${p.id}`} className="inline-flex items-center gap-2 font-medium text-brand-800 hover:underline">
                       <span className="size-3 rounded-full" style={{ background: p.color }} />
                       {p.name}
-                    </span>
+                    </Link>
                   </td>
                   <td>{p.specialty?.name ?? "—"}</td>
                   <td>{[p.registryType, p.registryNumber].filter(Boolean).join(" ") || "—"}</td>
                   <td>{formatPhone(p.phone) || "—"}</td>
                   <td>{p.active ? <Badge tone="green">Ativo</Badge> : <Badge>Inativo</Badge>}</td>
-                  <td className="space-x-3 whitespace-nowrap text-right">
+                  <td className="whitespace-nowrap text-right">
                     <Link href={`/profissionais?edit=${p.id}`} className="text-sm text-brand-700 hover:underline">Editar</Link>
-                    <DeleteButton
-                      action={deleteProfessional} id={p.id}
-                      message={`Excluir o profissional “${p.name}”? Quem já tem atendimentos não pode ser excluído; desative o cadastro nesse caso.`}
-                    />
                   </td>
                 </tr>
               ))}

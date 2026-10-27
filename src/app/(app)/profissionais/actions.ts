@@ -57,6 +57,6 @@ export async function deleteProfessional(_: FormState, formData: FormData): Prom
       );
     }
     await db.professional.delete({ where: { id } });
-    return { success: "Profissional excluído." };
+    return { redirectTo: "/profissionais" };
   });
 }
