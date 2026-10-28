@@ -65,6 +65,12 @@ enum AppointmentStatus {
   NO_SHOW
 }
 
+/** Quem cancelou um atendimento (informativo; o status continua CANCELED). */
+enum CancelParty {
+  PATIENT
+  PROFESSIONAL
+}
+
 enum EntryKind {
   INCOME
   EXPENSE
@@ -109,13 +115,17 @@ model User {
   /// ADMIN = "Administrador da empresa" (acesso total aos módulos liberados); STAFF = "Usuário" (usa o perfil de acesso)
   role            UserRole  @default(ADMIN)
   accessProfileId String?
+  /// Quando o usuário é também um profissional que atende (tela "Atendimento" mostra só os atendimentos dele).
+  professionalId  String?   @unique
   active          Boolean   @default(true)
   lastLoginAt     DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   accessProfile AccessProfile? @relation(fields: [accessProfileId], references: [id], onDelete: SetNull)
+  professional  Professional?  @relation(fields: [professionalId], references: [id], onDelete: SetNull)
   notes         PatientNote[]
+  evolutions    Evolution[]
 }
 
 /// Perfil de acesso: nível por módulo ({ "PACIENTES": "EDIT", "AGENDA": "VIEW", ... }; ausente = sem acesso).
@@ -198,9 +208,15 @@ model Patient {
   emergencyContactRelationship String?
   emergencyContactPhone       String?
 
-  // Dados de saúde
+  naturalness String?
+  education   String?
+
+  // Plano de saúde
   healthPlanId          String?
   healthInsuranceNumber String?
+
+  // Anamnese: campos próprios + formulário estruturado (JSON, ver src/lib/anamnesis.ts)
+  anamnesis             Json?
   bloodType             String?
   allergies             String?
   medications           String?
@@ -230,9 +246,57 @@ model Patient {
   engagements  Engagement[]
   appointments Appointment[]
   entries      FinancialEntry[]
+  evolutions   Evolution[]
+  files        PatientFile[]
+  photo        PatientPhoto?
 
   @@index([name])
   @@index([healthPlanId])
+}
+
+/// Foto do paciente (guardada à parte para não pesar nas consultas do cadastro).
+model PatientPhoto {
+  patientId String   @id
+  mimeType  String
+  data      Bytes
+  updatedAt DateTime @updatedAt
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+/// Documento anexado ao paciente, guardado no próprio banco (o disco do container não é persistente).
+model PatientFile {
+  id         String   @id @default(cuid())
+  patientId  String
+  fileName   String
+  mimeType   String
+  sizeBytes  Int
+  data       Bytes
+  createdAt  DateTime @default(now())
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+}
+
+/// Evolução (registro do atendimento): uma por atendimento, escrita pelo profissional.
+model Evolution {
+  id             String   @id @default(cuid())
+  appointmentId  String   @unique
+  patientId      String
+  professionalId String
+  authorId       String?
+  content        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  appointment  Appointment  @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  patient      Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  professional Professional @relation(fields: [professionalId], references: [id], onDelete: Restrict)
+  author       User?        @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([patientId, createdAt])
+  @@index([professionalId])
 }
 
 model PatientNote {
@@ -272,13 +336,18 @@ model Professional {
   email          String?
   color          String    @default("#2f7d5b")
   notes          String?
+  /// Quando o profissional também é cadastrado como colaborador.
+  collaboratorId String?   @unique
   active         Boolean   @default(true)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
   specialty    Specialty?    @relation(fields: [specialtyId], references: [id], onDelete: Restrict)
+  collaborator Collaborator? @relation(fields: [collaboratorId], references: [id], onDelete: SetNull)
+  user         User?
   engagements  Engagement[]
   appointments Appointment[]
+  evolutions   Evolution[]
 
   @@index([name])
   @@index([specialtyId])
@@ -398,6 +467,7 @@ model Appointment {
   priceCents     Int               @default(0)
   notes          String?
   canceledReason String?
+  canceledBy     CancelParty?
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
 
@@ -406,6 +476,7 @@ model Appointment {
   professional Professional     @relation(fields: [professionalId], references: [id], onDelete: Restrict)
   service      Service?         @relation(fields: [serviceId], references: [id], onDelete: SetNull)
   entries      FinancialEntry[]
+  evolution    Evolution?
 
   @@index([startsAt])
   @@index([professionalId, startsAt])
@@ -452,9 +523,10 @@ model Collaborator {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
 
-  entries   FinancialEntry[]
-  movements StockMovement[]
-  contracts Contract[]
+  entries      FinancialEntry[]
+  movements    StockMovement[]
+  contracts    Contract[]
+  professional Professional?
 }
 
 enum ContractStatus {

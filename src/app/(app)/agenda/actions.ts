@@ -9,14 +9,25 @@ import { UserError, dateField, optional, parseForm, requiredEnum, selectId, time
 
 const statusSchema = z.object({
   id: selectId("o atendimento"),
-  status: requiredEnum(["SCHEDULED", "CONFIRMED", "COMPLETED", "CANCELED", "NO_SHOW"], "Situação"),
+  status: requiredEnum(
+    ["SCHEDULED", "CONFIRMED", "COMPLETED", "CANCELED", "CANCELED_PATIENT", "CANCELED_PROFESSIONAL", "NO_SHOW"],
+    "Situação",
+  ),
   reason: optional(300),
 });
+
+/** Status pedido na tela → status gravado e, no cancelamento, quem cancelou. */
+function resolveStatus(requested: z.infer<typeof statusSchema>["status"]) {
+  if (requested === "CANCELED_PATIENT") return { status: "CANCELED" as const, canceledBy: "PATIENT" as const };
+  if (requested === "CANCELED_PROFESSIONAL") return { status: "CANCELED" as const, canceledBy: "PROFESSIONAL" as const };
+  return { status: requested, canceledBy: null };
+}
 
 export async function setAppointmentStatus(_: FormState, formData: FormData): Promise<FormState> {
   const parsed = parseForm(statusSchema, formData);
   if (parsed.state) return parsed.state;
-  const { id, status, reason } = parsed.data;
+  const { id, reason } = parsed.data;
+  const { status, canceledBy } = resolveStatus(parsed.data.status);
 
   return runAction(["AGENDA", "LANCAMENTOS"], formData, async () => {
     await db.$transaction(async (tx) => {
@@ -43,7 +54,7 @@ export async function setAppointmentStatus(_: FormState, formData: FormData): Pr
 
       await tx.appointment.update({
         where: { id },
-        data: { status, canceledReason: status === "CANCELED" ? reason : null },
+        data: { status, canceledReason: status === "CANCELED" ? reason : null, canceledBy },
       });
 
       // Cobrança por sessão acompanha o cancelamento / reabertura do atendimento.

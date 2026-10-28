@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { runAction } from "@/lib/action";
 import { dateOnly } from "@/lib/dates";
-import { ALLOWED_FILES, MAX_FILES_PER_UPLOAD, MAX_FILE_BYTES, extensionOf, formatBytes } from "@/lib/contracts";
+import { prepareFiles } from "@/lib/uploads";
 import { UserError, dateField, optional, optionalDate, optionalMoney, parseForm, required, selectId, type FormState } from "@/lib/form";
 
 const contractSchema = z.object({
@@ -18,33 +18,6 @@ const contractSchema = z.object({
   value: optionalMoney(),
   valueNote: optional(80),
 });
-
-/** Valida os arquivos enviados no formulário (quantidade, tamanho total e tipo) e lê o conteúdo. */
-async function prepareFiles(formData: FormData) {
-  const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
-  if (files.length > MAX_FILES_PER_UPLOAD) {
-    throw new UserError(`Envie até ${MAX_FILES_PER_UPLOAD} arquivos por vez.`);
-  }
-  const total = files.reduce((sum, f) => sum + f.size, 0);
-  if (total > MAX_FILE_BYTES) {
-    throw new UserError(`O envio ultrapassa ${formatBytes(MAX_FILE_BYTES)} (enviado: ${formatBytes(total)}). Envie menos arquivos por vez.`);
-  }
-
-  const prepared = [];
-  for (const file of files) {
-    const ext = extensionOf(file.name);
-    const mimeType = ALLOWED_FILES[ext];
-    if (!mimeType) {
-      throw new UserError(
-        `Tipo de arquivo não permitido: “${file.name}”. Aceitos: ${Object.keys(ALLOWED_FILES).join(", ")}.`,
-      );
-    }
-    // nome sem caminho e sem caracteres de controle
-    const fileName = file.name.replace(/[\\/\u0000-\u001f]/g, "_").slice(-150);
-    prepared.push({ fileName, mimeType, sizeBytes: file.size, data: Buffer.from(await file.arrayBuffer()) });
-  }
-  return prepared;
-}
 
 export async function saveContract(_: FormState, formData: FormData): Promise<FormState> {
   const parsed = parseForm(contractSchema, formData);

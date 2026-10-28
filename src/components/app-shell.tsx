@@ -22,6 +22,7 @@ const NAV: NavGroup[] = [
     icon: Stethoscope,
     items: [
       { href: "/agenda", label: "Agenda", access: "AGENDA" },
+      { href: "/atendimento", label: "Atendimento", access: "AGENDA" },
       { href: "/lancamentos", label: "Lançamentos", access: "LANCAMENTOS" },
       { href: "/pacientes", label: "Pacientes", access: "PACIENTES" },
       { href: "/profissionais", label: "Profissionais", access: "PROFISSIONAIS" },

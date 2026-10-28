@@ -21,11 +21,20 @@ export default async function UsersPage({
   const [users, profiles, editing] = await Promise.all([
     db.user.findMany({
       orderBy: [{ active: "desc" }, { name: "asc" }],
-      include: { accessProfile: { select: { name: true } } },
+      include: { accessProfile: { select: { name: true } }, professional: { select: { name: true } } },
     }),
     db.accessProfile.findMany({ orderBy: { name: "asc" } }),
     editId && editId !== "new" ? db.user.findUnique({ where: { id: editId } }) : null,
   ]);
+  // profissionais ainda sem usuário (mais o atual deste usuário)
+  const professionals =
+    editId !== undefined
+      ? await db.professional.findMany({
+          where: { OR: [{ active: true, user: null }, ...(editing?.professionalId ? [{ id: editing.professionalId }] : [])] },
+          orderBy: { name: "asc" },
+          select: { id: true, name: true },
+        })
+      : [];
 
   return (
     <>
@@ -63,6 +72,16 @@ export default async function UsersPage({
                     : "Vale só para o nível Usuário. Sem perfil, o usuário não acessa os módulos."
                 }
               />
+              <SelectField
+                name="professionalId" label="Este usuário é um profissional?" placeholder="Não, não atende pacientes"
+                options={professionals.map((p) => ({ value: p.id, label: p.name }))}
+                defaultValue={editing?.professionalId}
+                hint={
+                  professionals.length === 0
+                    ? "Nenhum profissional livre. Cadastre em Profissionais."
+                    : "Se sim, escolha o cadastro dele: a tela Atendimento mostrará só os atendimentos dele."
+                }
+              />
               <TextField
                 name="password" label={editing ? "Nova senha" : "Senha"} type="password" autoComplete="new-password"
                 required={!editing}
@@ -91,7 +110,7 @@ export default async function UsersPage({
       <div className="table-wrap">
         <table className="table">
           <thead>
-            <tr><th>Nome</th><th>E-mail</th><th>Nível</th><th>Perfil de acesso</th><th>Situação</th><th>Último acesso</th><th /></tr>
+            <tr><th>Nome</th><th>E-mail</th><th>Nível</th><th>Perfil de acesso</th><th>Profissional</th><th>Situação</th><th>Último acesso</th><th /></tr>
           </thead>
           <tbody>
             {users.map((u) => (
@@ -111,6 +130,7 @@ export default async function UsersPage({
                     <span className="text-muted">Sem perfil</span>
                   )}
                 </td>
+                <td>{u.professional?.name ?? <span className="text-muted">—</span>}</td>
                 <td>{u.active ? <Badge tone="green">Ativo</Badge> : <Badge>Inativo</Badge>}</td>
                 <td className="whitespace-nowrap text-muted">{u.lastLoginAt ? formatDateTime(u.lastLoginAt) : "—"}</td>
                 <td className="whitespace-nowrap text-right">

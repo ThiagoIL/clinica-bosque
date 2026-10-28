@@ -1,6 +1,6 @@
 import type {
   AccountType, AppointmentStatus, BillingMode, EngagementStatus, EntryKind, EntryStatus,
-  AttendanceKind, PaymentMethod, Recurrence, RepeatEnd, Sex, StockMovementType, UserRole,
+  AttendanceKind, CancelParty, PaymentMethod, Recurrence, RepeatEnd, Sex, StockMovementType, UserRole,
 } from "@/generated/prisma/enums";
 
 export const sexLabels: Record<Sex, string> = { FEMALE: "Feminino", MALE: "Masculino", OTHER: "Outro" };
@@ -41,8 +41,16 @@ export const engagementStatusLabels: Record<EngagementStatus, string> = {
 };
 
 export const appointmentStatusLabels: Record<AppointmentStatus, string> = {
-  SCHEDULED: "Agendado", CONFIRMED: "Confirmado", COMPLETED: "Realizado", CANCELED: "Cancelado", NO_SHOW: "Faltou",
+  SCHEDULED: "Agendado", CONFIRMED: "Agendamento confirmado", COMPLETED: "Paciente presente", CANCELED: "Cancelado", NO_SHOW: "Paciente ausente",
 };
+
+export const cancelPartyLabels: Record<CancelParty, string> = {
+  PATIENT: "Paciente cancelou", PROFESSIONAL: "Profissional cancelou",
+};
+
+/** Rótulo do status, detalhando quem cancelou quando se sabe. */
+export const appointmentStatusLabel = (status: AppointmentStatus, canceledBy?: CancelParty | null) =>
+  status === "CANCELED" && canceledBy ? cancelPartyLabels[canceledBy] : appointmentStatusLabels[status];
 
 export const entryStatusLabels: Record<EntryStatus, string> = {
   PENDING: "Em aberto", PAID: "Pago", CANCELED: "Cancelado",

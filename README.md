@@ -12,15 +12,16 @@ Nas listas, a linha tem apenas o botão **Editar** (ou clique no nome). A exclus
 
 | Módulo | O que faz |
 | --- | --- |
-| **Pacientes** | Cadastro por seções: dados do paciente, familiar/responsável, saúde, financeiro e observações (+ histórico de anotações). |
+| **Pacientes** | Prontuário em abas, com foto do paciente e painel de sessões (próxima, presentes, ausentes, canceladas): **Cadastro** (dados pessoais, plano e carteirinha, familiar/responsável), **Anamnese** (ficha completa de avaliação), **Sessões** (atendimentos e as evoluções de todos os profissionais), **Financeiro** (pacotes, cobranças, pagamentos e dados de cobrança) e **Documentos** (anexos). |
 | **Profissionais** | Médicos/terapeutas, com especialidade (do cadastro), data de nascimento e cor própria na agenda (paleta pronta ou cor personalizada). Podem ser excluídos enquanto não tiverem atendimentos; depois disso, apenas desativados. |
 | **Especialidades** | Cadastro usado no cadastro do profissional e nos filtros da agenda e dos lançamentos. |
 | **Serviços** | Catálogo de serviços e duração. Podem ser excluídos enquanto não foram usados em lançamentos. |
 | **Planos de saúde e tabela de preços** | Cadastro de convênios (o plano **Particular** sempre existe) e uma tabela de preços por plano para serviços e produtos, com opção de copiar de outro plano com ajuste percentual. O paciente tem um plano e o valor do lançamento é sugerido pela tabela. |
 | **Lançamentos** | Seleciona paciente, profissional, tipo do atendimento (consulta, retorno ou sessão), serviço, valor e a repetição (diária, semanal, quinzenal, mensal) com **dias da semana** à escolha e término por **quantidade de sessões, data ou mês**. Gera todos os agendamentos e o financeiro (por sessão, pacote único ou parcelado). Pode ser **editado** ou **excluído** direto da lista (exclusão barrada quando há cobrança paga: nesse caso, cancele o lançamento). |
-| **Agenda** | Visões dia/semana/mês; filtros por especialidade, profissional e paciente; confirmar, marcar realizado/faltou, cancelar e reagendar. |
+| **Agenda** | Visões dia/semana/mês; filtros por especialidade, profissional e paciente (busca por nome). Ao clicar em um atendimento: informar a situação (agendamento confirmado, paciente presente, paciente ausente, paciente cancelou, profissional cancelou), reagendar, ir para o atendimento ou para o paciente. |
+| **Atendimento** | Tela do profissional: só os atendimentos do usuário logado (o usuário precisa estar vinculado a um profissional em *Usuários*), por dia, com a situação e a **evolução** de cada atendimento. As evoluções aparecem na aba Sessões do paciente. Faz parte do módulo Agenda. |
 | **Financeiro** | Contas a receber e a pagar (com parcelamento e baixa), extrato por conta com saldo corrido e fluxo de caixa (realizado × previsto). |
-| **Colaboradores e contratos** | Cadastro de colaboradores/fornecedores (favorecidos das contas a pagar) e **gestão de contratos**: ativos, a vencer, vencidos e encerrados, com **anexos** (PDF, imagens, Word, Excel…). O painel inicial avisa dos contratos que vencem em 30 dias. |
+| **Colaboradores e contratos** | Cadastro de colaboradores/fornecedores (favorecidos das contas a pagar; um profissional pode ser ligado ao seu cadastro de colaborador) e **gestão de contratos**: ativos, a vencer, vencidos e encerrados, com **anexos** (PDF, imagens, Word, Excel…). O painel inicial avisa dos contratos que vencem em 30 dias. |
 | **Estoque** | Itens, saldo mínimo, entradas/saídas/ajustes; compra pode gerar conta a pagar. **Desligado por padrão**: só aparece se o fornecedor liberar o módulo. |
 | **Usuários e perfis de acesso** | O *Administrador da empresa* tem acesso total aos módulos liberados e gerencia usuários. Os demais usuários seguem um **perfil de acesso**, que define por módulo: sem acesso, *Consulta* (só vê) ou *Edita*. Cada usuário altera a própria senha em *Minha conta*. |
 

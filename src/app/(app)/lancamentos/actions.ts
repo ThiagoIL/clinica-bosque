@@ -348,6 +348,12 @@ export async function deleteEngagement(_: FormState, formData: FormData): Promis
           `Este lançamento tem ${paid} cobrança(s) paga(s) e não pode ser excluído. Cancele o lançamento: as cobranças pagas são mantidas no financeiro.`,
         );
       }
+      const evolutions = await tx.evolution.count({ where: { appointment: { engagementId: id } } });
+      if (evolutions > 0) {
+        throw new UserError(
+          `Este lançamento tem ${evolutions} evolução(ões) registrada(s) no prontuário e não pode ser excluído. Cancele o lançamento para manter o histórico.`,
+        );
+      }
       // as relações são "SetNull": remove os filhos explicitamente, cobranças primeiro
       await tx.financialEntry.deleteMany({ where: { engagementId: id } });
       await tx.appointment.deleteMany({ where: { engagementId: id } });

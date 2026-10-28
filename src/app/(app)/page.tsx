@@ -4,7 +4,7 @@ import {
   addDays, dateOnly, endOfMonth, formatDate, formatTime, monthTitle, startOfMonth, todayString, weekdayName, zoned,
 } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
-import { appointmentStatusLabels } from "@/lib/labels";
+import { appointmentStatusLabel } from "@/lib/labels";
 import { appointmentTone } from "@/lib/status";
 import { getAccess, requireUser } from "@/lib/auth";
 import { levelOf } from "@/lib/access";
@@ -154,7 +154,7 @@ export default async function DashboardPage({
                           {a.service?.name ?? "Atendimento"} · {a.professional.name}
                         </span>
                       </span>
-                      <Badge tone={appointmentTone(a.status)}>{appointmentStatusLabels[a.status]}</Badge>
+                      <Badge tone={appointmentTone(a.status)}>{appointmentStatusLabel(a.status, a.canceledBy)}</Badge>
                     </Link>
                   </li>
                 ))}

@@ -31,6 +31,19 @@ export default async function ProfessionalsPage({
         orderBy: { name: "asc" },
       })
     : [];
+  // colaboradores que ainda não são profissionais (mais o atual deste cadastro)
+  const collaborators = showForm
+    ? await db.collaborator.findMany({
+        where: {
+          OR: [
+            { active: true, professional: null },
+            ...(editing?.collaboratorId ? [{ id: editing.collaboratorId }] : []),
+          ],
+        },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, role: true },
+      })
+    : [];
 
   return (
     <>
@@ -45,6 +58,12 @@ export default async function ProfessionalsPage({
           <ActionForm key={editing?.id ?? "new"} action={saveProfessional}>
             {editing && <input type="hidden" name="id" value={editing.id} />}
             <FormGrid>
+              <SelectField
+                name="collaboratorId" label="Já é um colaborador?" span={3} placeholder="Não, é só profissional"
+                options={collaborators.map((c) => ({ value: c.id, label: c.role ? `${c.name} — ${c.role}` : c.name }))}
+                defaultValue={editing?.collaboratorId}
+                hint="Se a pessoa já está em Colaboradores, selecione para ligar os dois cadastros (contratos e contas a pagar)."
+              />
               <TextField name="name" label="Nome" required span={2} defaultValue={editing?.name} />
               <SelectField
                 name="specialtyId" label="Especialidade" placeholder="Sem especialidade"

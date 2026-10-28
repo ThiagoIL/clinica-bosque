@@ -13,6 +13,7 @@ const schema = z.object({
   id: z.string().optional(),
   name: required("Nome", 150),
   specialtyId: optionalId(),
+  collaboratorId: optionalId(),
   registryType: optional(20),
   registryNumber: optional(40),
   cpf: cpf(),
@@ -31,6 +32,15 @@ export async function saveProfessional(_: FormState, formData: FormData): Promis
   return runAction("PROFISSIONAIS", formData, async () => {
     if (rest.specialtyId && !(await db.specialty.findUnique({ where: { id: rest.specialtyId } }))) {
       throw new UserError("Especialidade não encontrada.", { specialtyId: "Especialidade inválida" });
+    }
+    if (rest.collaboratorId) {
+      if (!(await db.collaborator.findUnique({ where: { id: rest.collaboratorId } }))) {
+        throw new UserError("Colaborador não encontrado.", { collaboratorId: "Colaborador inválido" });
+      }
+      const taken = await db.professional.findUnique({ where: { collaboratorId: rest.collaboratorId } });
+      if (taken && taken.id !== id) {
+        throw new UserError(`Este colaborador já está vinculado ao profissional ${taken.name}.`, { collaboratorId: "Já vinculado" });
+      }
     }
     const data = { ...rest, birthDate: birthDate ? dateOnly(birthDate) : null };
     if (id) await db.professional.update({ where: { id }, data });

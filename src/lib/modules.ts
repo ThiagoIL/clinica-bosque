@@ -1,7 +1,7 @@
 // Módulos do sistema e níveis de acesso. Sem dependências de servidor: usado também no cliente e no proxy.
 
 export const MODULES = [
-  { key: "AGENDA", label: "Agenda", description: "Agenda de atendimentos (dia, semana, mês) e controle de presença.", paths: ["/agenda"] },
+  { key: "AGENDA", label: "Agenda", description: "Agenda de atendimentos (dia, semana, mês), controle de presença e tela de atendimento com evolução.", paths: ["/agenda", "/atendimento"] },
   { key: "LANCAMENTOS", label: "Lançamentos", description: "Lançamento de consultas, retornos, sessões e terapias com agendamento recorrente.", paths: ["/lancamentos"] },
   { key: "PACIENTES", label: "Pacientes", description: "Cadastro completo dos pacientes.", paths: ["/pacientes"] },
   { key: "PROFISSIONAIS", label: "Profissionais", description: "Cadastro dos médicos e terapeutas.", paths: ["/profissionais"] },

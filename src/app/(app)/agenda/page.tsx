@@ -7,7 +7,7 @@ import {
   addDays, addMonths, formatDate, formatTime, isDateString, localParts, monthName, monthTitle,
   startOfMonth, startOfWeek, todayString, weekday, weekdayName, weekdayShort, zoned,
 } from "@/lib/dates";
-import { appointmentStatusLabels } from "@/lib/labels";
+import { appointmentStatusLabel } from "@/lib/labels";
 import { appointmentTone } from "@/lib/status";
 import { Badge, Card, LinkButton, PageHeader, param } from "@/components/ui/primitives";
 import { AppointmentActions } from "@/components/appointment-actions";
@@ -36,12 +36,26 @@ export default async function AgendaPage({
   const today = todayString();
   const view = (["day", "week", "month"] as const).find((v) => v === param(sp.view)) ?? "week";
   const date = isDateString(param(sp.date)) ? param(sp.date)! : today;
-  const professionalId = param(sp.professionalId) ?? "";
   const specialtyId = param(sp.specialtyId) ?? "";
-  const patientId = param(sp.patientId) ?? "";
+  // paciente/profissional: busca por nome (ou, vindo de um link, pelo id)
+  let patientQ = param(sp.patient)?.trim() ?? "";
+  let professionalQ = param(sp.professional)?.trim() ?? "";
+  const patientIdParam = param(sp.patientId) ?? "";
+  const professionalIdParam = param(sp.professionalId) ?? "";
+  if (!patientQ && patientIdParam) {
+    patientQ = (await db.patient.findUnique({ where: { id: patientIdParam }, select: { name: true } }))?.name ?? "";
+  }
+  if (!professionalQ && professionalIdParam) {
+    professionalQ = (await db.professional.findUnique({ where: { id: professionalIdParam }, select: { name: true } }))?.name ?? "";
+  }
   const showCanceled = param(sp.canceled) === "1";
   const selectedId = param(sp.a);
-  const canLaunch = levelOf(await getAccess(), "LANCAMENTOS") === "EDIT";
+  const statusOpen = param(sp.status) === "1";
+  const access = await getAccess();
+  const canLaunch = levelOf(access, "LANCAMENTOS") === "EDIT";
+  const me = access.user
+    ? await db.user.findUnique({ where: { id: access.user.id }, select: { role: true, professionalId: true } })
+    : null;
 
   // intervalo de dias exibido
   let days: string[];
@@ -60,9 +74,15 @@ export default async function AgendaPage({
     db.appointment.findMany({
       where: {
         startsAt: { gte: rangeStart, lt: rangeEnd },
-        ...(professionalId ? { professionalId } : {}),
-        ...(specialtyId ? { professional: { specialtyId } } : {}),
-        ...(patientId ? { patientId } : {}),
+        ...(professionalQ || specialtyId
+          ? {
+              professional: {
+                ...(professionalQ ? { name: { contains: professionalQ, mode: "insensitive" as const } } : {}),
+                ...(specialtyId ? { specialtyId } : {}),
+              },
+            }
+          : {}),
+        ...(patientQ ? { patient: { name: { contains: patientQ, mode: "insensitive" as const } } } : {}),
         ...(showCanceled ? {} : { status: { not: "CANCELED" } }),
       },
       orderBy: { startsAt: "asc" },
@@ -87,10 +107,19 @@ export default async function AgendaPage({
             professional: { select: { name: true } },
             service: { select: { name: true } },
             engagement: { select: { id: true, number: true } },
+            evolution: { select: { id: true } },
           },
         })
       : null,
   ]);
+
+  // ids exatos para pré-preencher "Novo lançamento" quando o nome digitado é de um cadastro
+  const same = (a: string, b: string) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }) === 0;
+  const patientId = patientQ ? (patients.find((p) => same(p.name, patientQ))?.id ?? "") : "";
+  const professionalId = professionalQ ? (professionals.find((p) => same(p.name, professionalQ))?.id ?? "") : "";
+
+  // a tela de atendimento é do profissional do atendimento (ou do administrador)
+  const canAttend = !!selected && !!me && (me.role === "ADMIN" || me.professionalId === selected.professionalId);
 
   const byDay = new Map<string, Item[]>();
   for (const it of items) {
@@ -102,7 +131,7 @@ export default async function AgendaPage({
   const build = (over: Record<string, string | undefined>) => {
     const q = new URLSearchParams();
     const merged: Record<string, string | undefined> = {
-      view, date, specialtyId, professionalId, patientId, canceled: showCanceled ? "1" : undefined, ...over,
+      view, date, specialtyId, professional: professionalQ, patient: patientQ, canceled: showCanceled ? "1" : undefined, ...over,
     };
     for (const [k, v] of Object.entries(merged)) if (v) q.set(k, v);
     return `/agenda?${q.toString()}`;
@@ -170,17 +199,19 @@ export default async function AgendaPage({
           </div>
           <div className="min-w-48">
             <label className="label" htmlFor="f-prof">Profissional</label>
-            <select id="f-prof" name="professionalId" defaultValue={professionalId} className="input">
-              <option value="">Todos</option>
-              {professionals.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+            <input
+              id="f-prof" name="professional" defaultValue={professionalQ} list="f-professionals"
+              placeholder="Digite para buscar…" autoComplete="off" className="input"
+            />
+            <datalist id="f-professionals">{professionals.map((p) => <option key={p.id} value={p.name} />)}</datalist>
           </div>
           <div className="min-w-48">
             <label className="label" htmlFor="f-pat">Paciente</label>
-            <select id="f-pat" name="patientId" defaultValue={patientId} className="input">
-              <option value="">Todos</option>
-              {patients.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+            <input
+              id="f-pat" name="patient" defaultValue={patientQ} list="f-patients"
+              placeholder="Digite para buscar…" autoComplete="off" className="input"
+            />
+            <datalist id="f-patients">{patients.map((p) => <option key={p.id} value={p.name} />)}</datalist>
           </div>
           <div>
             <label className="label" htmlFor="f-date">Ir para a data</label>
@@ -195,13 +226,29 @@ export default async function AgendaPage({
         </form>
 
         {professionals.length > 0 && (
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-            {professionals.map((p) => (
-              <span key={p.id} className="inline-flex items-center gap-1.5">
-                <span className="size-2.5 rounded-full" style={{ background: p.color }} />
-                {p.name}
-              </span>
-            ))}
+          <div className="flex items-start gap-3 text-xs text-muted">
+            {/* legenda limitada a duas linhas; a lista completa fica em "Ver todos" */}
+            <div className="flex max-h-9 flex-1 flex-wrap gap-x-4 gap-y-1 overflow-hidden">
+              {professionals.map((p) => (
+                <span key={p.id} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                  <span className="size-2.5 rounded-full" style={{ background: p.color }} />
+                  {p.name}
+                </span>
+              ))}
+            </div>
+            {professionals.length > 6 && (
+              <details className="relative shrink-0">
+                <summary className="cursor-pointer text-brand-700 hover:underline">Ver todos ({professionals.length})</summary>
+                <ul className="absolute right-0 z-20 mt-1 max-h-72 w-64 space-y-1 overflow-y-auto rounded-lg border border-line bg-surface p-3 shadow-lg">
+                  {professionals.map((p) => (
+                    <li key={p.id} className="flex items-center gap-1.5">
+                      <span className="size-2.5 shrink-0 rounded-full" style={{ background: p.color }} />
+                      <span className="truncate">{p.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
           </div>
         )}
       </div>
@@ -213,20 +260,30 @@ export default async function AgendaPage({
           description={`${selected.service?.name ?? "Atendimento"} com ${selected.professional.name}`}
           actions={
             <div className="flex items-center gap-2">
-              <Badge tone={appointmentTone(selected.status)}>{appointmentStatusLabels[selected.status]}</Badge>
+              <Badge tone={appointmentTone(selected.status)}>{appointmentStatusLabel(selected.status, selected.canceledBy)}</Badge>
               <Link href={build({ a: undefined })} className="btn btn-ghost btn-sm">Fechar</Link>
             </div>
           }
         >
-          <div className="mb-4 flex flex-wrap gap-4 text-sm">
-            <Link href={`/pacientes/${selected.patient.id}`} className="text-brand-700 hover:underline">Ver paciente</Link>
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            {canAttend && (
+              <LinkButton href={`/atendimento/${selected.id}`} size="sm">
+                {selected.evolution ? "Ir para o atendimento (evolução registrada)" : "Ir para o atendimento"}
+              </LinkButton>
+            )}
+            <LinkButton href={`/pacientes/${selected.patient.id}`} variant="outline" size="sm">Ir para o paciente</LinkButton>
             {selected.engagement && (
-              <Link href={`/lancamentos/${selected.engagement.id}`} className="text-brand-700 hover:underline">
+              <Link href={`/lancamentos/${selected.engagement.id}`} className="ml-2 text-sm text-brand-700 hover:underline">
                 Lançamento #{selected.engagement.number}
               </Link>
             )}
           </div>
-          <AppointmentActions appointment={selected} />
+          <details className="rounded-lg border border-line" open={statusOpen}>
+            <summary className="cursor-pointer px-3 py-2 text-sm font-medium">Informar status ou reagendar</summary>
+            <div className="border-t border-line p-3">
+              <AppointmentActions appointment={selected} />
+            </div>
+          </details>
         </Card>
       )}
 
@@ -433,7 +490,7 @@ function TimeGrid({
                         borderColor: a.professional.color,
                         background: `${a.professional.color}26`,
                       }}
-                      title={`${a.patient.name} — ${a.professional.name} (${appointmentStatusLabels[a.status]})`}
+                      title={`${a.patient.name} — ${a.professional.name} (${appointmentStatusLabel(a.status, a.canceledBy)})`}
                     >
                       <span className="block truncate font-semibold">
                         {formatTime(a.startsAt)} {a.patient.name}

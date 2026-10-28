@@ -18,6 +18,7 @@ const userSchema = z.object({
     .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "E-mail inválido"),
   role: requiredEnum(["ADMIN", "STAFF"], "Nível"),
   accessProfileId: optionalId(),
+  professionalId: optionalId(),
   password: z.string().optional(),
   active: checkbox(),
 });
@@ -42,6 +43,16 @@ export async function saveUser(_: FormState, formData: FormData): Promise<FormSt
 
     if (data.accessProfileId && !(await db.accessProfile.findUnique({ where: { id: data.accessProfileId } }))) {
       throw new UserError("Perfil de acesso não encontrado.", { accessProfileId: "Perfil inválido" });
+    }
+
+    if (data.professionalId) {
+      if (!(await db.professional.findUnique({ where: { id: data.professionalId } }))) {
+        throw new UserError("Profissional não encontrado.", { professionalId: "Profissional inválido" });
+      }
+      const taken = await db.user.findUnique({ where: { professionalId: data.professionalId } });
+      if (taken && taken.id !== id) {
+        throw new UserError(`Este profissional já está vinculado ao usuário ${taken.name}.`, { professionalId: "Já vinculado" });
+      }
     }
 
     const sameEmail = await db.user.findUnique({ where: { email: data.email } });

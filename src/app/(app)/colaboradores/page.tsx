@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatPhone } from "@/lib/cpf";
-import { ActionForm, CheckboxField, FormActions, FormGrid, MaskedField, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
+import { ActionForm, CheckboxField, DeleteButton, FormActions, FormGrid, MaskedField, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
 import { Badge, Card, EmptyState, FilterBar, FilterField, LinkButton, PageHeader, param } from "@/components/ui/primitives";
-import { saveCollaborator } from "./actions";
+import { deleteCollaborator, saveCollaborator } from "./actions";
 
 export const metadata = { title: "Colaboradores" };
 
@@ -17,7 +17,7 @@ export default async function CollaboratorsPage({
   const q = param(sp.q)?.trim() ?? "";
   const status = param(sp.status) ?? "active";
 
-  const [collaborators, editing] = await Promise.all([
+  const [collaborators, editing, serviceNames] = await Promise.all([
     db.collaborator.findMany({
       where: {
         ...(status === "active" ? { active: true } : status === "inactive" ? { active: false } : {}),
@@ -28,7 +28,13 @@ export default async function CollaboratorsPage({
       orderBy: [{ active: "desc" }, { name: "asc" }],
       include: { contracts: { select: { status: true } } },
     }),
-    editId && editId !== "new" ? db.collaborator.findUnique({ where: { id: editId } }) : null,
+    editId && editId !== "new"
+      ? db.collaborator.findUnique({ where: { id: editId }, include: { professional: { select: { id: true, name: true } } } })
+      : null,
+    // sugestões do campo "Função / tipo de serviço": os serviços cadastrados
+    editId !== undefined
+      ? db.service.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { name: true } })
+      : [],
   ]);
 
   return (
@@ -52,13 +58,25 @@ export default async function CollaboratorsPage({
             {editing && <input type="hidden" name="id" value={editing.id} />}
             <FormGrid>
               <TextField name="name" label="Nome / razão social" required span={2} defaultValue={editing?.name} />
-              <TextField name="role" label="Função / tipo de serviço" defaultValue={editing?.role} hint="Ex.: Médico PJ, Limpeza, Fornecedor de materiais" />
+              <TextField
+                name="role" label="Função / tipo de serviço" defaultValue={editing?.role}
+                suggestions={serviceNames.map((s) => s.name)}
+                hint="Escolha um serviço cadastrado ou digite outro (ex.: Limpeza, Fornecedor de materiais)"
+              />
               <TextField name="document" label="CPF / CNPJ" inputMode="numeric" defaultValue={editing?.document} />
               <MaskedField name="phone" label="Telefone" mask="phone" defaultValue={editing?.phone} />
               <TextField name="email" label="E-mail" type="email" defaultValue={editing?.email} />
               <TextareaField name="notes" label="Observações" span={3} defaultValue={editing?.notes} />
               <CheckboxField name="active" label="Colaborador ativo" defaultChecked={editing?.active ?? true} />
             </FormGrid>
+            {editing?.professional && (
+              <p className="mt-3 text-xs text-muted">
+                Também cadastrado como profissional:{" "}
+                <Link href={`/profissionais?edit=${editing.professional.id}`} className="text-brand-700 hover:underline">
+                  {editing.professional.name}
+                </Link>
+              </p>
+            )}
             <FormActions>
               <SubmitButton>Salvar</SubmitButton>
               <LinkButton href="/colaboradores" variant="outline">Cancelar</LinkButton>
@@ -66,6 +84,14 @@ export default async function CollaboratorsPage({
                 <>
                   <LinkButton href={`/contratos?collaborator=${editing.id}&status=all`} variant="outline">Ver contratos</LinkButton>
                   <LinkButton href={`/contratos/novo?collaborator=${editing.id}`} variant="outline">Novo contrato</LinkButton>
+                  <span className="ml-auto">
+                    <DeleteButton
+                      action={deleteCollaborator} id={editing.id}
+                      message={`Excluir o colaborador “${editing.name}”? Quem tem contratos ou contas a pagar não pode ser excluído; desative o cadastro nesse caso.`}
+                    >
+                      Excluir colaborador
+                    </DeleteButton>
+                  </span>
                 </>
               )}
             </FormActions>

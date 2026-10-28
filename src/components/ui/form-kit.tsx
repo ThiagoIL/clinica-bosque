@@ -240,9 +240,11 @@ type BaseProps = {
 export function TextField({
   name, label, required, hint, span, disabled,
   defaultValue, type = "text", placeholder, inputMode, maxLength, min, max, step, autoComplete,
-  value, onChange,
+  value, onChange, suggestions,
 }: BaseProps & {
   defaultValue?: string | number | null;
+  /** Sugestões (lista de opções), sem impedir que o usuário digite outro valor. */
+  suggestions?: string[];
   /** Modo controlado (opcional). */
   value?: string;
   onChange?: (value: string) => void;
@@ -273,10 +275,16 @@ export function TextField({
         max={max}
         step={step}
         autoComplete={autoComplete}
+        list={suggestions ? `${name}-list` : undefined}
         disabled={disabled || ro}
         aria-invalid={error ? true : undefined}
         className="input"
       />
+      {suggestions && (
+        <datalist id={`${name}-list`}>
+          {suggestions.map((s) => <option key={s} value={s} />)}
+        </datalist>
+      )}
     </FieldShell>
   );
 }
@@ -452,7 +460,7 @@ export function PriceInput({ name, defaultValue, placeholder = "—" }: { name: 
       aria-label="Preço"
       disabled={ro}
       aria-invalid={error ? true : undefined}
-      className="input w-32 text-right tabular-nums"
+      className="input ml-auto w-32 text-right tabular-nums"
     />
   );
 }
@@ -497,6 +505,33 @@ export function CheckboxField({
         {hint && <span className="block text-xs text-muted">{hint}</span>}
       </label>
     </div>
+  );
+}
+
+/** Grupo de caixas de seleção que enviam vários valores com o mesmo nome. */
+export function CheckGroupField({
+  name, label, options, defaultValues = [],
+}: { name: string; label: string; options: string[]; defaultValues?: string[] }) {
+  const ro = useReadOnly();
+  return (
+    <fieldset>
+      <legend className="label">{label}</legend>
+      <div className="space-y-1.5">
+        {options.map((o) => (
+          <label key={o} className="flex items-start gap-2 text-sm">
+            <input
+              type="checkbox"
+              name={name}
+              value={o}
+              defaultChecked={defaultValues.includes(o)}
+              disabled={ro}
+              className="mt-0.5 size-4 shrink-0 rounded border-line accent-brand-600"
+            />
+            {o}
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 

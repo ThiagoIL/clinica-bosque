@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { formatDate, formatDateTime } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
-import { WEEKDAY_OPTIONS, appointmentStatusLabels, attendanceKindLabels, billingModeLabels, engagementStatusLabels, recurrenceLabels } from "@/lib/labels";
+import { WEEKDAY_OPTIONS, appointmentStatusLabel, attendanceKindLabels, billingModeLabels, engagementStatusLabels, recurrenceLabels } from "@/lib/labels";
 import { appointmentTone, engagementTone, entryDisplayStatus } from "@/lib/status";
 import { ActionForm, ConfirmSubmit } from "@/components/ui/form-kit";
 import { Badge, Card, LinkButton, PageHeader } from "@/components/ui/primitives";
@@ -122,7 +122,7 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
                   </span>
                   <span className="flex items-center gap-3">
                     <span className="tabular-nums text-muted">{formatMoney(a.priceCents)}</span>
-                    <Badge tone={appointmentTone(a.status)}>{appointmentStatusLabels[a.status]}</Badge>
+                    <Badge tone={appointmentTone(a.status)}>{appointmentStatusLabel(a.status, a.canceledBy)}</Badge>
                   </span>
                 </summary>
                 <div className="mt-3 rounded-lg bg-canvas p-4">

@@ -3,7 +3,7 @@ import { Plus } from "lucide-react";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
-import { formatDateTime } from "@/lib/dates";
+import { addDays, formatDateTime, isDateString, zoned } from "@/lib/dates";
 import { attendanceKindLabels, engagementStatusLabels, recurrenceLabels, optionsOf } from "@/lib/labels";
 import { engagementTone } from "@/lib/status";
 import { Badge, EmptyState, FilterBar, FilterField, LinkButton, PageHeader, Pagination, param } from "@/components/ui/primitives";
@@ -18,19 +18,44 @@ export default async function EngagementsPage({
 }) {
   const sp = await searchParams;
   const status = param(sp.status) ?? "";
-  const patientId = param(sp.patientId) ?? "";
-  const professionalId = param(sp.professionalId) ?? "";
+  // paciente/profissional: busca por nome (ou, vindo de um link, pelo id)
+  const patientIdParam = param(sp.patientId) ?? "";
+  const professionalIdParam = param(sp.professionalId) ?? "";
+  let patientQ = param(sp.patient)?.trim() ?? "";
+  let professionalQ = param(sp.professional)?.trim() ?? "";
   const specialtyId = param(sp.specialtyId) ?? "";
   const kindParam = param(sp.kind) ?? "";
   const kind = kindParam in attendanceKindLabels ? (kindParam as keyof typeof attendanceKindLabels) : undefined;
+  const from = isDateString(param(sp.from)) ? param(sp.from)! : "";
+  const to = isDateString(param(sp.to)) ? param(sp.to)! : "";
   const page = Math.max(1, Number(param(sp.page)) || 1);
+
+  if (!patientQ && patientIdParam) {
+    patientQ = (await db.patient.findUnique({ where: { id: patientIdParam }, select: { name: true } }))?.name ?? "";
+  }
+  if (!professionalQ && professionalIdParam) {
+    professionalQ = (await db.professional.findUnique({ where: { id: professionalIdParam }, select: { name: true } }))?.name ?? "";
+  }
 
   const where: Prisma.EngagementWhereInput = {
     ...(status ? { status: status as "ACTIVE" | "COMPLETED" | "CANCELED" } : {}),
-    ...(patientId ? { patientId } : {}),
-    ...(professionalId ? { professionalId } : {}),
-    ...(specialtyId ? { professional: { specialtyId } } : {}),
+    ...(patientQ ? { patient: { name: { contains: patientQ, mode: "insensitive" } } } : {}),
+    ...(professionalQ ? { professional: { name: { contains: professionalQ, mode: "insensitive" }, ...(specialtyId ? { specialtyId } : {}) } } : {}),
+    ...(specialtyId && !professionalQ ? { professional: { specialtyId } } : {}),
     ...(kind ? { kind } : {}),
+    // período: lançamentos com algum atendimento entre as datas
+    ...(from || to
+      ? {
+          appointments: {
+            some: {
+              startsAt: {
+                ...(from ? { gte: zoned(from, "00:00") } : {}),
+                ...(to ? { lt: zoned(addDays(to, 1), "00:00") } : {}),
+              },
+            },
+          },
+        }
+      : {}),
   };
 
   const [items, total, patients, professionals, specialties] = await Promise.all([
@@ -70,10 +95,8 @@ export default async function EngagementsPage({
 
       <FilterBar action="/lancamentos">
         <FilterField label="Paciente" className="min-w-52">
-          <select name="patientId" defaultValue={patientId} className="input">
-            <option value="">Todos</option>
-            {patients.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
+          <input name="patient" defaultValue={patientQ} list="f-patients" placeholder="Digite para buscar…" autoComplete="off" className="input" />
+          <datalist id="f-patients">{patients.map((p) => <option key={p.id} value={p.name} />)}</datalist>
         </FilterField>
         <FilterField label="Especialidade" className="min-w-44">
           <select name="specialtyId" defaultValue={specialtyId} className="input">
@@ -82,10 +105,14 @@ export default async function EngagementsPage({
           </select>
         </FilterField>
         <FilterField label="Profissional" className="min-w-52">
-          <select name="professionalId" defaultValue={professionalId} className="input">
-            <option value="">Todos</option>
-            {professionals.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
+          <input name="professional" defaultValue={professionalQ} list="f-professionals" placeholder="Digite para buscar…" autoComplete="off" className="input" />
+          <datalist id="f-professionals">{professionals.map((p) => <option key={p.id} value={p.name} />)}</datalist>
+        </FilterField>
+        <FilterField label="Atendimentos de">
+          <input type="date" name="from" defaultValue={from} className="input" />
+        </FilterField>
+        <FilterField label="até">
+          <input type="date" name="to" defaultValue={to} className="input" />
         </FilterField>
         <FilterField label="Tipo">
           <select name="kind" defaultValue={kind ?? ""} className="input">
@@ -149,7 +176,7 @@ export default async function EngagementsPage({
       )}
       <Pagination
         page={page} pageSize={PAGE_SIZE} total={total} basePath="/lancamentos"
-        params={{ status, patientId, professionalId, specialtyId, kind: kind ?? "" }}
+        params={{ status, patient: patientQ, professional: professionalQ, specialtyId, kind: kind ?? "", from, to }}
       />
     </>
   );
