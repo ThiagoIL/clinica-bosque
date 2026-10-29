@@ -1,3 +1,5 @@
+"use client";
+
 import type { AppointmentStatus } from "@/generated/prisma/enums";
 import { ActionForm, ConfirmSubmit, SubmitButton, TextField } from "@/components/ui/form-kit";
 import { localParts } from "@/lib/dates";

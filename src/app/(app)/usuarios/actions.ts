@@ -19,6 +19,7 @@ const userSchema = z.object({
   role: requiredEnum(["ADMIN", "STAFF"], "Nível"),
   accessProfileId: optionalId(),
   professionalId: optionalId(),
+  canSeeFinance: checkbox(),
   password: z.string().optional(),
   active: checkbox(),
 });
@@ -28,7 +29,12 @@ export async function saveUser(_: FormState, formData: FormData): Promise<FormSt
   if (parsed.state) return parsed.state;
   const { id, password, accessProfileId, ...rest } = parsed.data;
   // administradores têm acesso total; o perfil de acesso só vale para o nível "Usuário"
-  const data = { ...rest, accessProfileId: rest.role === "STAFF" ? accessProfileId : null };
+  // (o administrador sempre vê o financeiro)
+  const data = {
+    ...rest,
+    accessProfileId: rest.role === "STAFF" ? accessProfileId : null,
+    canSeeFinance: rest.role === "ADMIN" ? true : rest.canSeeFinance,
+  };
 
   return runAction("ADMIN", formData, async (current) => {
     if (current.role !== "ADMIN") throw new UserError("Somente administradores podem gerenciar usuários.");

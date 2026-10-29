@@ -87,6 +87,11 @@ export default async function UsersPage({
                 required={!editing}
                 hint={editing ? "Deixe em branco para manter a senha atual (mín. 8 caracteres)" : "Mínimo de 8 caracteres"}
               />
+              <CheckboxField
+                name="canSeeFinance" label="Pode ver o financeiro"
+                defaultChecked={editing?.canSeeFinance ?? true}
+                hint="Contas, cobranças e pagamentos do paciente. Vale para o nível Usuário (também precisa do perfil liberar o módulo Financeiro), inclusive para médicos e terapeutas."
+              />
               <CheckboxField name="active" label="Usuário ativo" defaultChecked={editing?.active ?? true} />
             </FormGrid>
             <FormActions>

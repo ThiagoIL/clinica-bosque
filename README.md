@@ -23,7 +23,7 @@ Nas listas, a linha tem apenas o botão **Editar** (ou clique no nome). A exclus
 | **Financeiro** | Contas a receber e a pagar (com parcelamento e baixa), extrato por conta com saldo corrido e fluxo de caixa (realizado × previsto). |
 | **Colaboradores e contratos** | Cadastro de colaboradores/fornecedores (favorecidos das contas a pagar; um profissional pode ser ligado ao seu cadastro de colaborador) e **gestão de contratos**: ativos, a vencer, vencidos e encerrados, com **anexos** (PDF, imagens, Word, Excel…). O painel inicial avisa dos contratos que vencem em 30 dias. |
 | **Estoque** | Itens, saldo mínimo, entradas/saídas/ajustes; compra pode gerar conta a pagar. **Desligado por padrão**: só aparece se o fornecedor liberar o módulo. |
-| **Usuários e perfis de acesso** | O *Administrador da empresa* tem acesso total aos módulos liberados e gerencia usuários. Os demais usuários seguem um **perfil de acesso**, que define por módulo: sem acesso, *Consulta* (só vê) ou *Edita*. Cada usuário altera a própria senha em *Minha conta*. |
+| **Usuários e perfis de acesso** | O *Administrador da empresa* tem acesso total aos módulos liberados e gerencia usuários. Os demais usuários seguem um **perfil de acesso**, que define por módulo: sem acesso, *Consulta* (só vê) ou *Edita*. Cada usuário também pode ser marcado como **profissional** (tela Atendimento) e como **pode ver o financeiro** ou não — vale mesmo para médicos e terapeutas, e esconde o módulo Financeiro e a aba Financeiro do paciente. Cada usuário altera a própria senha em *Minha conta*. |
 
 ### Console do fornecedor
 

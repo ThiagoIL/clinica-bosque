@@ -8,9 +8,8 @@ import {
   startOfMonth, startOfWeek, todayString, weekday, weekdayName, weekdayShort, zoned,
 } from "@/lib/dates";
 import { appointmentStatusLabel } from "@/lib/labels";
-import { appointmentTone } from "@/lib/status";
-import { Badge, Card, LinkButton, PageHeader, param } from "@/components/ui/primitives";
-import { AppointmentActions } from "@/components/appointment-actions";
+import { LinkButton, PageHeader, param } from "@/components/ui/primitives";
+import { AgendaItem, type AgendaItemInfo } from "@/components/agenda-item";
 import { getAccess } from "@/lib/auth";
 import { levelOf } from "@/lib/access";
 
@@ -21,11 +20,16 @@ type View = "day" | "week" | "month";
 
 type Item = Prisma.AppointmentGetPayload<{
   include: {
-    patient: { select: { name: true } };
+    patient: { select: { id: true; name: true } };
     professional: { select: { name: true; color: true } };
     service: { select: { name: true } };
+    engagement: { select: { id: true; number: true } };
+    evolution: { select: { id: true } };
   };
 }>;
+
+/** Dados da janelinha de um atendimento. */
+type ToInfo = (a: Item) => AgendaItemInfo;
 
 export default async function AgendaPage({
   searchParams,
@@ -50,7 +54,6 @@ export default async function AgendaPage({
   }
   const showCanceled = param(sp.canceled) === "1";
   const selectedId = param(sp.a);
-  const statusOpen = param(sp.status) === "1";
   const access = await getAccess();
   const canLaunch = levelOf(access, "LANCAMENTOS") === "EDIT";
   const me = access.user
@@ -70,7 +73,7 @@ export default async function AgendaPage({
   const rangeStart = zoned(days[0], "00:00");
   const rangeEnd = zoned(addDays(days[days.length - 1], 1), "00:00");
 
-  const [items, professionals, specialties, patients, selected] = await Promise.all([
+  const [items, professionals, specialties, patients] = await Promise.all([
     db.appointment.findMany({
       where: {
         startsAt: { gte: rangeStart, lt: rangeEnd },
@@ -87,9 +90,11 @@ export default async function AgendaPage({
       },
       orderBy: { startsAt: "asc" },
       include: {
-        patient: { select: { name: true } },
+        patient: { select: { id: true, name: true } },
         professional: { select: { name: true, color: true } },
         service: { select: { name: true } },
+        engagement: { select: { id: true, number: true } },
+        evolution: { select: { id: true } },
       },
     }),
     db.professional.findMany({
@@ -99,18 +104,6 @@ export default async function AgendaPage({
     }),
     db.specialty.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
     db.patient.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
-    selectedId
-      ? db.appointment.findUnique({
-          where: { id: selectedId },
-          include: {
-            patient: { select: { id: true, name: true, phone: true } },
-            professional: { select: { name: true } },
-            service: { select: { name: true } },
-            engagement: { select: { id: true, number: true } },
-            evolution: { select: { id: true } },
-          },
-        })
-      : null,
   ]);
 
   // ids exatos para pré-preencher "Novo lançamento" quando o nome digitado é de um cadastro
@@ -119,7 +112,20 @@ export default async function AgendaPage({
   const professionalId = professionalQ ? (professionals.find((p) => same(p.name, professionalQ))?.id ?? "") : "";
 
   // a tela de atendimento é do profissional do atendimento (ou do administrador)
-  const canAttend = !!selected && !!me && (me.role === "ADMIN" || me.professionalId === selected.professionalId);
+  const toInfo: ToInfo = (a) => ({
+    id: a.id,
+    patientId: a.patient.id,
+    patientName: a.patient.name,
+    when: `${formatDate(localParts(a.startsAt).date)} ${formatTime(a.startsAt)}–${formatTime(a.endsAt)}`,
+    serviceName: a.service?.name ?? "Atendimento",
+    professionalName: a.professional.name,
+    status: a.status,
+    canceledBy: a.canceledBy,
+    startsAt: a.startsAt,
+    engagement: a.engagement,
+    hasEvolution: !!a.evolution,
+    canAttend: !!me && (me.role === "ADMIN" || me.professionalId === a.professionalId),
+  });
 
   const byDay = new Map<string, Item[]>();
   for (const it of items) {
@@ -253,44 +259,13 @@ export default async function AgendaPage({
         )}
       </div>
 
-      {selected && (
-        <Card
-          className="mb-4 border-brand-300"
-          title={`${selected.patient.name} · ${formatDate(localParts(selected.startsAt).date)} ${formatTime(selected.startsAt)}–${formatTime(selected.endsAt)}`}
-          description={`${selected.service?.name ?? "Atendimento"} com ${selected.professional.name}`}
-          actions={
-            <div className="flex items-center gap-2">
-              <Badge tone={appointmentTone(selected.status)}>{appointmentStatusLabel(selected.status, selected.canceledBy)}</Badge>
-              <Link href={build({ a: undefined })} className="btn btn-ghost btn-sm">Fechar</Link>
-            </div>
-          }
-        >
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            {canAttend && (
-              <LinkButton href={`/atendimento/${selected.id}`} size="sm">
-                {selected.evolution ? "Ir para o atendimento (evolução registrada)" : "Ir para o atendimento"}
-              </LinkButton>
-            )}
-            <LinkButton href={`/pacientes/${selected.patient.id}`} variant="outline" size="sm">Ir para o paciente</LinkButton>
-            {selected.engagement && (
-              <Link href={`/lancamentos/${selected.engagement.id}`} className="ml-2 text-sm text-brand-700 hover:underline">
-                Lançamento #{selected.engagement.number}
-              </Link>
-            )}
-          </div>
-          <details className="rounded-lg border border-line" open={statusOpen}>
-            <summary className="cursor-pointer px-3 py-2 text-sm font-medium">Informar status ou reagendar</summary>
-            <div className="border-t border-line p-3">
-              <AppointmentActions appointment={selected} />
-            </div>
-          </details>
-        </Card>
-      )}
-
       {view === "month" ? (
-        <MonthGrid days={days} month={date.slice(0, 7)} today={today} byDay={byDay} build={build} />
+        <MonthGrid days={days} month={date.slice(0, 7)} today={today} byDay={byDay} build={build} toInfo={toInfo} openId={selectedId} />
       ) : (
-        <TimeGrid days={days} today={today} byDay={byDay} build={build} professionalId={professionalId} patientId={patientId} canLaunch={canLaunch} />
+        <TimeGrid
+          days={days} today={today} byDay={byDay} build={build} toInfo={toInfo} openId={selectedId}
+          professionalId={professionalId} patientId={patientId} canLaunch={canLaunch}
+        />
       )}
 
       {items.length === 0 && (
@@ -305,8 +280,8 @@ export default async function AgendaPage({
 type Build = (over: Record<string, string | undefined>) => string;
 
 function MonthGrid({
-  days, month, today, byDay, build,
-}: { days: string[]; month: string; today: string; byDay: Map<string, Item[]>; build: Build }) {
+  days, month, today, byDay, build, toInfo, openId,
+}: { days: string[]; month: string; today: string; byDay: Map<string, Item[]>; build: Build; toInfo: ToInfo; openId?: string }) {
   const heads = days.slice(0, 7);
   return (
     <div className="overflow-x-auto rounded-xl border border-line bg-surface">
@@ -336,10 +311,11 @@ function MonthGrid({
               <ul className="space-y-0.5">
                 {list.slice(0, 3).map((a) => (
                   <li key={a.id}>
-                    <Link
-                      href={build({ a: a.id, view: "month" })}
+                    <AgendaItem
+                      info={toInfo(a)}
+                      defaultOpen={a.id === openId}
                       className={clsx(
-                        "flex items-center gap-1 truncate rounded px-1 py-0.5 text-[11px] leading-tight hover:bg-brand-50",
+                        "flex w-full items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[11px] leading-tight hover:bg-brand-50",
                         a.status === "CANCELED" && "line-through opacity-60",
                       )}
                       title={`${formatTime(a.startsAt)} ${a.patient.name} — ${a.professional.name}`}
@@ -347,7 +323,7 @@ function MonthGrid({
                       <span className="size-1.5 shrink-0 rounded-full" style={{ background: a.professional.color }} />
                       <span className="tabular-nums text-muted">{formatTime(a.startsAt)}</span>
                       <span className="truncate">{a.patient.name}</span>
-                    </Link>
+                    </AgendaItem>
                   </li>
                 ))}
               </ul>
@@ -399,8 +375,10 @@ function layoutLanes(list: Item[]) {
 }
 
 function TimeGrid({
-  days, today, byDay, build, professionalId, patientId, canLaunch,
+  days, today, byDay, build, toInfo, openId, professionalId, patientId, canLaunch,
 }: {
+  toInfo: ToInfo;
+  openId?: string;
   canLaunch: boolean;
   days: string[];
   today: string;
@@ -474,11 +452,12 @@ function TimeGrid({
                   const top = ((minutesOf(a.startsAt) - startHour * 60) / 60) * HOUR_HEIGHT;
                   const height = Math.max(((minutesOf(a.endsAt) - minutesOf(a.startsAt)) / 60) * HOUR_HEIGHT, 24);
                   return (
-                    <Link
+                    <AgendaItem
                       key={a.id}
-                      href={build({ a: a.id })}
+                      info={toInfo(a)}
+                      defaultOpen={a.id === openId}
                       className={clsx(
-                        "absolute overflow-hidden rounded-md border-l-4 px-1.5 py-1 text-[11px] leading-tight shadow-xs transition hover:z-10 hover:shadow-md",
+                        "absolute overflow-hidden rounded-md border-l-4 px-1.5 py-1 text-left text-[11px] leading-tight shadow-xs transition hover:z-10 hover:shadow-md",
                         a.status === "CANCELED" && "line-through opacity-60",
                         a.status === "COMPLETED" && "opacity-80",
                       )}
@@ -498,7 +477,7 @@ function TimeGrid({
                       <span className="block truncate text-muted">
                         {a.service?.name ?? "Atendimento"} · {a.professional.name}
                       </span>
-                    </Link>
+                    </AgendaItem>
                   );
                 })}
               </div>

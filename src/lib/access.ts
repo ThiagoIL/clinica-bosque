@@ -10,7 +10,7 @@ export type AccessSnapshot = {
   blocked: boolean;
   blockMessage: string | null;
   enabled: ModuleKey[];
-  user: { id: string; role: "ADMIN" | "STAFF"; active: boolean; permissions: Permissions } | null;
+  user: { id: string; role: "ADMIN" | "STAFF"; active: boolean; canSeeFinance: boolean; permissions: Permissions } | null;
 };
 
 const TTL_MS = 3000;
@@ -30,7 +30,7 @@ export async function loadSnapshot(userId: string | null): Promise<AccessSnapsho
     userId
       ? db.user.findUnique({
           where: { id: userId },
-          select: { id: true, role: true, active: true, accessProfile: { select: { permissions: true } } },
+          select: { id: true, role: true, active: true, canSeeFinance: true, accessProfile: { select: { permissions: true } } },
         })
       : null,
   ]);
@@ -44,6 +44,7 @@ export async function loadSnapshot(userId: string | null): Promise<AccessSnapsho
           id: user.id,
           role: user.role,
           active: user.active,
+          canSeeFinance: user.canSeeFinance,
           permissions: parsePermissions(user.accessProfile?.permissions),
         }
       : null,
@@ -60,6 +61,8 @@ export function clearAccessCache() {
 
 export function levelOf(snapshot: AccessSnapshot, module: ModuleKey): Level {
   if (!snapshot.user?.active) return "NONE";
+  // o usuário sem permissão para ver o financeiro não o acessa, mesmo que o perfil libere o módulo
+  if (module === "FINANCEIRO" && snapshot.user.role === "STAFF" && !snapshot.user.canSeeFinance) return "NONE";
   return levelFor({ role: snapshot.user.role, permissions: snapshot.user.permissions, enabled: snapshot.enabled }, module);
 }
 

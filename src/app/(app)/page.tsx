@@ -145,7 +145,7 @@ export default async function DashboardPage({
               <ul className="divide-y divide-line">
                 {appointmentsToday.map((a) => (
                   <li key={a.id}>
-                    <Link href={`/agenda?view=day&a=${a.id}`} className="flex items-center gap-4 px-5 py-3 hover:bg-brand-50/50">
+                    <Link href={`/agenda?view=day&date=${todayString()}&a=${a.id}`} className="flex items-center gap-4 px-5 py-3 hover:bg-brand-50/50">
                       <span className="w-16 shrink-0 text-sm font-semibold tabular-nums">{formatTime(a.startsAt)}</span>
                       <span className="h-8 w-1 shrink-0 rounded-full" style={{ background: a.professional.color }} />
                       <span className="min-w-0 flex-1">

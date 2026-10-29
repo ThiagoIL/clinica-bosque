@@ -49,7 +49,6 @@ export default async function PatientPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const tab: TabId = TABS.find((t) => t.id === param(sp.tab))?.id ?? "cadastro";
 
   const patient = await db.patient.findUnique({ where: { id }, include: { healthPlan: true } });
   if (!patient) notFound();
@@ -58,6 +57,9 @@ export default async function PatientPage({
   const canLaunch = levelOf(access, "LANCAMENTOS") === "EDIT";
   const canAgenda = levelOf(access, "AGENDA") !== "NONE";
   const canFinance = levelOf(access, "FINANCEIRO") !== "NONE";
+  // quem não pode ver o financeiro não vê a aba (nem os dados de cobrança do paciente)
+  const tabs = TABS.filter((t) => t.id !== "financeiro" || canFinance);
+  const tab: TabId = tabs.find((t) => t.id === param(sp.tab))?.id ?? "cadastro";
 
   const [counts, next, photo] = await Promise.all([
     db.appointment.groupBy({ by: ["status"], where: { patientId: id }, _count: { _all: true } }),
@@ -99,7 +101,7 @@ export default async function PatientPage({
       </div>
 
       <nav role="tablist" className="mb-5 flex gap-1 overflow-x-auto border-b border-line">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <Link
             key={t.id}
             href={`/pacientes/${id}?tab=${t.id}`}

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatPhone } from "@/lib/cpf";
-import { ActionForm, CheckboxField, DeleteButton, FormActions, FormGrid, MaskedField, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
+import { ActionForm, CheckboxField, ComboField, DeleteButton, FormActions, FormGrid, MaskedField, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
 import { Badge, Card, EmptyState, FilterBar, FilterField, LinkButton, PageHeader, param } from "@/components/ui/primitives";
 import { deleteCollaborator, saveCollaborator } from "./actions";
 
@@ -58,10 +58,10 @@ export default async function CollaboratorsPage({
             {editing && <input type="hidden" name="id" value={editing.id} />}
             <FormGrid>
               <TextField name="name" label="Nome / razão social" required span={2} defaultValue={editing?.name} />
-              <TextField
+              <ComboField
                 name="role" label="Função / tipo de serviço" defaultValue={editing?.role}
-                suggestions={serviceNames.map((s) => s.name)}
-                hint="Escolha um serviço cadastrado ou digite outro (ex.: Limpeza, Fornecedor de materiais)"
+                options={serviceNames.map((s) => s.name)}
+                hint="Escolha um serviço cadastrado ou “Outro” para digitar (ex.: Limpeza, Fornecedor de materiais)"
               />
               <TextField name="document" label="CPF / CNPJ" inputMode="numeric" defaultValue={editing?.document} />
               <MaskedField name="phone" label="Telefone" mask="phone" defaultValue={editing?.phone} />

@@ -240,11 +240,9 @@ type BaseProps = {
 export function TextField({
   name, label, required, hint, span, disabled,
   defaultValue, type = "text", placeholder, inputMode, maxLength, min, max, step, autoComplete,
-  value, onChange, suggestions,
+  value, onChange,
 }: BaseProps & {
   defaultValue?: string | number | null;
-  /** Sugestões (lista de opções), sem impedir que o usuário digite outro valor. */
-  suggestions?: string[];
   /** Modo controlado (opcional). */
   value?: string;
   onChange?: (value: string) => void;
@@ -275,16 +273,10 @@ export function TextField({
         max={max}
         step={step}
         autoComplete={autoComplete}
-        list={suggestions ? `${name}-list` : undefined}
         disabled={disabled || ro}
         aria-invalid={error ? true : undefined}
         className="input"
       />
-      {suggestions && (
-        <datalist id={`${name}-list`}>
-          {suggestions.map((s) => <option key={s} value={s} />)}
-        </datalist>
-      )}
     </FieldShell>
   );
 }
@@ -356,6 +348,59 @@ export function SelectField({
           </option>
         ))}
       </select>
+    </FieldShell>
+  );
+}
+
+const OTHER = "__other";
+
+/**
+ * Lista de opções com saída para texto livre: escolhe-se uma opção ou "Outro (digitar)…".
+ * Envia um único valor com o `name` informado.
+ */
+export function ComboField({
+  name, label, required, hint, span, disabled, options, defaultValue, placeholder = "Selecione…", otherLabel = "Outro (digitar)…",
+}: BaseProps & { options: string[]; defaultValue?: string | null; placeholder?: string; otherLabel?: string }) {
+  const error = useFieldError(name);
+  const ro = useReadOnly();
+  const initial = defaultValue ?? "";
+  const known = options.includes(initial);
+  const [other, setOther] = useState(!!initial && !known);
+  const [picked, setPicked] = useState(known ? initial : "");
+  const [text, setText] = useState(!!initial && !known ? initial : "");
+  return (
+    <FieldShell label={label} name={name} error={error} hint={hint} required={required} span={span}>
+      <input type="hidden" name={name} value={other ? text : picked} />
+      <select
+        id={name}
+        value={other ? OTHER : picked}
+        onChange={(e) => {
+          if (e.target.value === OTHER) setOther(true);
+          else {
+            setOther(false);
+            setPicked(e.target.value);
+          }
+        }}
+        disabled={disabled || ro}
+        aria-invalid={error ? true : undefined}
+        className="input"
+      >
+        <option value="">{placeholder}</option>
+        {options.map((o) => (
+          <option key={o} value={o}>{o}</option>
+        ))}
+        <option value={OTHER}>{otherLabel}</option>
+      </select>
+      {other && (
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Digite aqui"
+          aria-label={label}
+          disabled={disabled || ro}
+          className="input mt-2"
+        />
+      )}
     </FieldShell>
   );
 }
