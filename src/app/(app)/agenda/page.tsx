@@ -7,7 +7,8 @@ import {
   addDays, addMonths, formatDate, formatTime, isDateString, localParts, monthName, monthTitle,
   startOfMonth, startOfWeek, todayString, weekday, weekdayName, weekdayShort, zoned,
 } from "@/lib/dates";
-import { appointmentStatusLabel } from "@/lib/labels";
+import { appointmentStatusLabel, appointmentStatusLabels } from "@/lib/labels";
+import { appointmentColors } from "@/lib/status";
 import { LinkButton, PageHeader, param } from "@/components/ui/primitives";
 import { AgendaItem, type AgendaItemInfo } from "@/components/agenda-item";
 import { getAccess } from "@/lib/auth";
@@ -21,7 +22,7 @@ type View = "day" | "week" | "month";
 type Item = Prisma.AppointmentGetPayload<{
   include: {
     patient: { select: { id: true; name: true } };
-    professional: { select: { name: true; color: true } };
+    professional: { select: { name: true } };
     service: { select: { name: true } };
     engagement: { select: { id: true; number: true } };
     evolution: { select: { id: true } };
@@ -91,7 +92,7 @@ export default async function AgendaPage({
       orderBy: { startsAt: "asc" },
       include: {
         patient: { select: { id: true, name: true } },
-        professional: { select: { name: true, color: true } },
+        professional: { select: { name: true } },
         service: { select: { name: true } },
         engagement: { select: { id: true, number: true } },
         evolution: { select: { id: true } },
@@ -100,7 +101,7 @@ export default async function AgendaPage({
     db.professional.findMany({
       where: { active: true, ...(specialtyId ? { specialtyId } : {}) },
       orderBy: { name: "asc" },
-      select: { id: true, name: true, color: true },
+      select: { id: true, name: true },
     }),
     db.specialty.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
     db.patient.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
@@ -231,32 +232,16 @@ export default async function AgendaPage({
           <Link href={`/agenda?view=${view}`} className="btn btn-ghost">Limpar</Link>
         </form>
 
-        {professionals.length > 0 && (
-          <div className="flex items-start gap-3 text-xs text-muted">
-            {/* legenda limitada a duas linhas; a lista completa fica em "Ver todos" */}
-            <div className="flex max-h-9 flex-1 flex-wrap gap-x-4 gap-y-1 overflow-hidden">
-              {professionals.map((p) => (
-                <span key={p.id} className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                  <span className="size-2.5 rounded-full" style={{ background: p.color }} />
-                  {p.name}
-                </span>
-              ))}
-            </div>
-            {professionals.length > 6 && (
-              <details className="relative shrink-0">
-                <summary className="cursor-pointer text-brand-700 hover:underline">Ver todos ({professionals.length})</summary>
-                <ul className="absolute right-0 z-20 mt-1 max-h-72 w-64 space-y-1 overflow-y-auto rounded-lg border border-line bg-surface p-3 shadow-lg">
-                  {professionals.map((p) => (
-                    <li key={p.id} className="flex items-center gap-1.5">
-                      <span className="size-2.5 shrink-0 rounded-full" style={{ background: p.color }} />
-                      <span className="truncate">{p.name}</span>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            )}
-          </div>
-        )}
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+          {(Object.keys(appointmentColors) as (keyof typeof appointmentColors)[])
+            .filter((s) => showCanceled || s !== "CANCELED")
+            .map((s) => (
+              <span key={s} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                <span className="size-2.5 rounded-full" style={{ background: appointmentColors[s] }} />
+                {appointmentStatusLabels[s]}
+              </span>
+            ))}
+        </div>
       </div>
 
       {view === "month" ? (
@@ -320,7 +305,7 @@ function MonthGrid({
                       )}
                       title={`${formatTime(a.startsAt)} ${a.patient.name} — ${a.professional.name}`}
                     >
-                      <span className="size-1.5 shrink-0 rounded-full" style={{ background: a.professional.color }} />
+                      <span className="size-1.5 shrink-0 rounded-full" style={{ background: appointmentColors[a.status] }} />
                       <span className="tabular-nums text-muted">{formatTime(a.startsAt)}</span>
                       <span className="truncate">{a.patient.name}</span>
                     </AgendaItem>
@@ -459,15 +444,14 @@ function TimeGrid({
                       className={clsx(
                         "absolute overflow-hidden rounded-md border-l-4 px-1.5 py-1 text-left text-[11px] leading-tight shadow-xs transition hover:z-10 hover:shadow-md",
                         a.status === "CANCELED" && "line-through opacity-60",
-                        a.status === "COMPLETED" && "opacity-80",
                       )}
                       style={{
                         top,
                         height,
                         left: `calc(${(lane / lanes) * 100}% + 1px)`,
                         width: `calc(${100 / lanes}% - 3px)`,
-                        borderColor: a.professional.color,
-                        background: `${a.professional.color}26`,
+                        borderColor: appointmentColors[a.status],
+                        background: `${appointmentColors[a.status]}26`,
                       }}
                       title={`${a.patient.name} — ${a.professional.name} (${appointmentStatusLabel(a.status, a.canceledBy)})`}
                     >

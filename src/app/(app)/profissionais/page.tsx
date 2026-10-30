@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { formatPhone } from "@/lib/cpf";
 import { dateOnlyToString } from "@/lib/dates";
 import {
-  ActionForm, CheckboxField, ColorField, DeleteButton, FormActions, FormGrid, MaskedField, SelectField, SubmitButton,
+  ActionForm, CheckboxField, DeleteButton, FormActions, FormGrid, MaskedField, SelectField, SubmitButton,
   TextField, TextareaField,
 } from "@/components/ui/form-kit";
 import { Badge, Card, EmptyState, LinkButton, PageHeader, param } from "@/components/ui/primitives";
@@ -80,7 +80,6 @@ export default async function ProfessionalsPage({
               />
               <MaskedField name="phone" label="Telefone" mask="phone" defaultValue={editing?.phone} />
               <TextField name="email" label="E-mail" type="email" defaultValue={editing?.email} />
-              <ColorField name="color" label="Cor na agenda" span={2} defaultValue={editing?.color ?? "#2f8f68"} />
               <TextareaField name="notes" label="Observações" span={3} defaultValue={editing?.notes} />
               <CheckboxField name="active" label="Profissional ativo" defaultChecked={editing?.active ?? true} />
             </FormGrid>
@@ -114,8 +113,7 @@ export default async function ProfessionalsPage({
               {professionals.map((p) => (
                 <tr key={p.id}>
                   <td>
-                    <Link href={`/profissionais?edit=${p.id}`} className="inline-flex items-center gap-2 font-medium text-brand-800 hover:underline">
-                      <span className="size-3 rounded-full" style={{ background: p.color }} />
+                    <Link href={`/profissionais?edit=${p.id}`} className="font-medium text-brand-800 hover:underline">
                       {p.name}
                     </Link>
                   </td>

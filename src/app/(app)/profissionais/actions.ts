@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { runAction } from "@/lib/action";
 import {
-  UserError, checkbox, cpf, digits, email, hexColor, optional, optionalDate, optionalId, parseForm, required,
+  UserError, checkbox, cpf, digits, email, optional, optionalDate, optionalId, parseForm, required,
   type FormState,
 } from "@/lib/form";
 import { dateOnly } from "@/lib/dates";
@@ -20,7 +20,6 @@ const schema = z.object({
   birthDate: optionalDate("Data de nascimento"),
   phone: digits(11),
   email: email(),
-  color: hexColor(),
   notes: optional(2000),
   active: checkbox(),
 });

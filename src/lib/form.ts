@@ -169,8 +169,6 @@ export const checkbox = () =>
     .optional()
     .transform((v) => v === "on" || v === "true" || v === "1");
 
-export const hexColor = () => z.string().regex(/^#[0-9a-fA-F]{6}$/, "Cor inválida");
-
 // ── parsing ──
 
 export function parseForm<S extends z.ZodType>(

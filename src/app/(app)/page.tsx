@@ -5,7 +5,7 @@ import {
 } from "@/lib/dates";
 import { formatMoney } from "@/lib/money";
 import { appointmentStatusLabel } from "@/lib/labels";
-import { appointmentTone } from "@/lib/status";
+import { appointmentColors, appointmentTone } from "@/lib/status";
 import { getAccess, requireUser } from "@/lib/auth";
 import { levelOf } from "@/lib/access";
 import type { ModuleKey } from "@/lib/modules";
@@ -39,7 +39,7 @@ export default async function DashboardPage({
           orderBy: { startsAt: "asc" },
           include: {
             patient: { select: { name: true } },
-            professional: { select: { name: true, color: true } },
+            professional: { select: { name: true } },
             service: { select: { name: true } },
           },
         })
@@ -147,7 +147,7 @@ export default async function DashboardPage({
                   <li key={a.id}>
                     <Link href={`/agenda?view=day&date=${todayString()}&a=${a.id}`} className="flex items-center gap-4 px-5 py-3 hover:bg-brand-50/50">
                       <span className="w-16 shrink-0 text-sm font-semibold tabular-nums">{formatTime(a.startsAt)}</span>
-                      <span className="h-8 w-1 shrink-0 rounded-full" style={{ background: a.professional.color }} />
+                      <span className="h-8 w-1 shrink-0 rounded-full" style={{ background: appointmentColors[a.status] }} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{a.patient.name}</span>
                         <span className="block truncate text-xs text-muted">
