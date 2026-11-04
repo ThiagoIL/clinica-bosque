@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import {
-  ChevronRight, ClipboardList, Handshake, LayoutDashboard, Menu, Package, ShieldCheck, Stethoscope, Wallet, X,
+  CalendarDays, ChevronRight, ClipboardCheck, ClipboardList, FilePlus2, Handshake, LayoutDashboard, Menu, Package,
+  ShieldCheck, Stethoscope, Users, Wallet, X,
   type LucideIcon,
 } from "lucide-react";
 import { ReadOnlyProvider } from "@/components/ui/form-kit";
@@ -78,6 +79,18 @@ const NAV: NavGroup[] = [
   },
 ];
 
+type Shortcut = NavItem & { icon: LucideIcon; /** prefixo que deixa o atalho ativo (padrão: o próprio href) */ match?: string };
+
+/** Atalhos da barra inferior do celular: os quatro primeiros que o usuário pode acessar; o resto fica em "Menu". */
+const SHORTCUTS: Shortcut[] = [
+  { href: "/", label: "Início", icon: LayoutDashboard },
+  { href: "/agenda", label: "Agenda", icon: CalendarDays, access: "AGENDA" },
+  { href: "/atendimento", label: "Atendimento", icon: ClipboardCheck, access: "AGENDA" },
+  { href: "/pacientes", label: "Pacientes", icon: Users, access: "PACIENTES" },
+  { href: "/lancamentos", label: "Lançamentos", icon: FilePlus2, access: "LANCAMENTOS" },
+  { href: "/financeiro/receber", label: "Financeiro", icon: Wallet, access: "FINANCEIRO", match: "/financeiro" },
+];
+
 /** Níveis de acesso do usuário logado, usados para montar o menu e o modo "somente consulta". */
 export type ShellAccess = { isAdmin: boolean; levels: Record<ModuleKey, Level> };
 
@@ -95,6 +108,7 @@ export function AppShell({ children, footer, access }: { children: ReactNode; fo
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+  const shortcuts = SHORTCUTS.filter(canSee).slice(0, 4);
 
   // Categorias abertas: a da tela atual abre sozinha; as demais o usuário abre e fecha.
   const activeGroup = groups.find((g) => g.items.some((i) => isActive(i.href)))?.id;
@@ -210,7 +224,7 @@ export function AppShell({ children, footer, access }: { children: ReactNode; fo
         </div>
       )}
 
-      <main className="min-w-0 px-4 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:py-8">
+      <main className="min-w-0 px-4 pt-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:py-8">
         <div className="mx-auto max-w-7xl">
           {readOnly && (
             <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
@@ -221,6 +235,47 @@ export function AppShell({ children, footer, access }: { children: ReactNode; fo
         </div>
       </main>
       <MobileTables />
+
+      {/* celular: atalhos fixos na parte de baixo, ao alcance do polegar */}
+      <nav
+        aria-label="Atalhos"
+        className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_6px_rgba(0,0,0,0.05)] lg:hidden"
+      >
+        <ul className="flex">
+          {shortcuts.map(({ href, label, icon: Icon, match }) => {
+            const active = !open && isActive(match ?? href);
+            return (
+              <li key={href} className="min-w-0 flex-1">
+                <Link
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  className={clsx(
+                    "flex flex-col items-center gap-0.5 px-1 py-2 text-[0.68rem] font-medium leading-tight",
+                    active ? "text-brand-700" : "text-muted",
+                  )}
+                >
+                  <Icon className={clsx("size-5", active && "text-accent-600")} />
+                  <span className="max-w-full truncate">{label}</span>
+                </Link>
+              </li>
+            );
+          })}
+          <li className="min-w-0 flex-1">
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              aria-label="Abrir menu"
+              className={clsx(
+                "flex w-full flex-col items-center gap-0.5 px-1 py-2 text-[0.68rem] font-medium leading-tight",
+                open ? "text-brand-700" : "text-muted",
+              )}
+            >
+              <Menu className="size-5" />
+              Menu
+            </button>
+          </li>
+        </ul>
+      </nav>
     </div>
   );
 }
