@@ -123,5 +123,8 @@ async function verifiedSubject(token: string | undefined, platform: boolean): Pr
 
 export const config = {
   // Arquivos estáticos (logo, ícones) precisam carregar na tela de login, antes da sessão.
-  matcher: ["/((?!_next/static|_next/image|api/health|.*\\.(?:jpg|jpeg|png|svg|ico|webp)$).*)"],
+  // Também liberam o app instalável: manifesto, service worker e a página de "sem conexão".
+  matcher: [
+    "/((?!_next/static|_next/image|api/health|manifest\\.webmanifest|sw\\.js|offline\\.html|.*\\.(?:jpg|jpeg|png|svg|ico|webp)$).*)",
+  ],
 };

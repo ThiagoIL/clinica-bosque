@@ -182,7 +182,7 @@ export function AppShell({ children, footer, access }: { children: ReactNode; fo
     <div className="min-h-screen lg:grid lg:grid-cols-[16.5rem_1fr]">
       <aside className="sticky top-0 hidden h-screen lg:block">{sidebar}</aside>
 
-      <div className="flex items-center justify-between border-b border-line bg-surface px-4 py-3 lg:hidden">
+      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-surface px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] lg:hidden">
         <button onClick={() => setOpen(true)} className="btn btn-ghost -ml-2 p-2" aria-label="Abrir menu">
           <Menu className="size-5" />
         </button>
@@ -196,7 +196,7 @@ export function AppShell({ children, footer, access }: { children: ReactNode; fo
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          <div className="absolute inset-y-0 left-0 w-72 shadow-xl">
+          <div className="absolute inset-y-0 left-0 w-72 pt-[env(safe-area-inset-top)] shadow-xl">
             <button
               onClick={() => setOpen(false)}
               className="absolute right-3 top-4 z-10 rounded p-1 text-muted hover:text-ink"
@@ -209,7 +209,7 @@ export function AppShell({ children, footer, access }: { children: ReactNode; fo
         </div>
       )}
 
-      <main className="min-w-0 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+      <main className="min-w-0 px-4 pt-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:py-8">
         <div className="mx-auto max-w-7xl">
           {readOnly && (
             <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900">

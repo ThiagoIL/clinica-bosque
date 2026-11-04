@@ -15,11 +15,18 @@ const nextConfig = {
     proxyClientMaxBodySize: "12mb",
   },
   async redirects() {
-    // "Fornecedores" foi substituído por "Colaboradores"
-    return [{ source: "/fornecedores", destination: "/colaboradores", permanent: true }];
+    // "Fornecedores" e "Colaboradores" agora fazem parte de Profissionais
+    return [
+      { source: "/fornecedores", destination: "/profissionais", permanent: true },
+      { source: "/colaboradores", destination: "/profissionais", permanent: true },
+    ];
   },
   async headers() {
-    return [{ source: "/(.*)", headers: securityHeaders }];
+    return [
+      { source: "/(.*)", headers: securityHeaders },
+      // o navegador precisa buscar sempre a versão nova do service worker
+      { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }] },
+    ];
   },
 };
 
