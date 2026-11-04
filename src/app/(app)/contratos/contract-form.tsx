@@ -8,21 +8,21 @@ import { saveContract } from "./actions";
 
 export function ContractForm({
   contract,
-  collaborators,
-  defaultCollaboratorId,
+  professionals,
+  defaultProfessionalId,
 }: {
   contract?: Contract;
-  collaborators: { id: string; name: string }[];
-  defaultCollaboratorId?: string;
+  professionals: { id: string; name: string }[];
+  defaultProfessionalId?: string;
 }) {
   return (
     <ActionForm action={saveContract}>
       {contract && <input type="hidden" name="id" value={contract.id} />}
       <FormGrid>
         <SelectField
-          name="collaboratorId" label="Colaborador" required span={2}
-          options={collaborators.map((c) => ({ value: c.id, label: c.name }))}
-          defaultValue={contract?.collaboratorId ?? defaultCollaboratorId}
+          name="professionalId" label="Profissional / fornecedor" required span={2}
+          options={professionals.map((c) => ({ value: c.id, label: c.name }))}
+          defaultValue={contract?.professionalId ?? defaultProfessionalId}
         />
         <TextField name="code" label="Nº / código do contrato" defaultValue={contract?.code} />
         <TextField name="title" label="Título / objeto" required span={3} defaultValue={contract?.title} />

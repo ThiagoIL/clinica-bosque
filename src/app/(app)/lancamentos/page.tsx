@@ -6,6 +6,8 @@ import { formatMoney } from "@/lib/money";
 import { addDays, formatDateTime, isDateString, zoned } from "@/lib/dates";
 import { attendanceKindLabels, engagementStatusLabels, recurrenceLabels, optionsOf } from "@/lib/labels";
 import { engagementTone } from "@/lib/status";
+import { requireUser } from "@/lib/auth";
+import { ownProfessionalId } from "@/lib/scope";
 import { Badge, EmptyState, FilterBar, FilterField, LinkButton, PageHeader, Pagination, param } from "@/components/ui/primitives";
 
 export const metadata = { title: "Lançamentos" };
@@ -17,13 +19,15 @@ export default async function EngagementsPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
+  // o profissional logado só vê os próprios lançamentos
+  const own = await ownProfessionalId((await requireUser()).id);
   const status = param(sp.status) ?? "";
   // paciente/profissional: busca por nome (ou, vindo de um link, pelo id)
   const patientIdParam = param(sp.patientId) ?? "";
   const professionalIdParam = param(sp.professionalId) ?? "";
   let patientQ = param(sp.patient)?.trim() ?? "";
-  let professionalQ = param(sp.professional)?.trim() ?? "";
-  const specialtyId = param(sp.specialtyId) ?? "";
+  let professionalQ = own ? "" : (param(sp.professional)?.trim() ?? "");
+  const specialtyId = own ? "" : (param(sp.specialtyId) ?? "");
   const kindParam = param(sp.kind) ?? "";
   const kind = kindParam in attendanceKindLabels ? (kindParam as keyof typeof attendanceKindLabels) : undefined;
   const from = isDateString(param(sp.from)) ? param(sp.from)! : "";
@@ -33,13 +37,14 @@ export default async function EngagementsPage({
   if (!patientQ && patientIdParam) {
     patientQ = (await db.patient.findUnique({ where: { id: patientIdParam }, select: { name: true } }))?.name ?? "";
   }
-  if (!professionalQ && professionalIdParam) {
+  if (!own && !professionalQ && professionalIdParam) {
     professionalQ = (await db.professional.findUnique({ where: { id: professionalIdParam }, select: { name: true } }))?.name ?? "";
   }
 
   const where: Prisma.EngagementWhereInput = {
     ...(status ? { status: status as "ACTIVE" | "COMPLETED" | "CANCELED" } : {}),
     ...(patientQ ? { patient: { name: { contains: patientQ, mode: "insensitive" } } } : {}),
+    ...(own ? { professionalId: own } : {}),
     ...(professionalQ ? { professional: { name: { contains: professionalQ, mode: "insensitive" }, ...(specialtyId ? { specialtyId } : {}) } } : {}),
     ...(specialtyId && !professionalQ ? { professional: { specialtyId } } : {}),
     ...(kind ? { kind } : {}),
@@ -74,7 +79,7 @@ export default async function EngagementsPage({
     db.engagement.count({ where }),
     db.patient.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
     db.professional.findMany({
-      where: specialtyId ? { specialtyId } : {},
+      where: { attends: true, ...(specialtyId ? { specialtyId } : {}) },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
@@ -85,7 +90,7 @@ export default async function EngagementsPage({
     <>
       <PageHeader
         title="Lançamentos"
-        description="Consultas, sessões e terapias lançadas para os pacientes."
+        description={own ? "Os seus lançamentos de consultas, sessões e terapias." : "Consultas, sessões e terapias lançadas para os pacientes."}
         actions={
           <LinkButton href="/lancamentos/novo">
             <Plus className="size-4" /> Novo lançamento
@@ -98,16 +103,20 @@ export default async function EngagementsPage({
           <input name="patient" defaultValue={patientQ} list="f-patients" placeholder="Digite para buscar…" autoComplete="off" className="input" />
           <datalist id="f-patients">{patients.map((p) => <option key={p.id} value={p.name} />)}</datalist>
         </FilterField>
-        <FilterField label="Especialidade" className="min-w-44">
-          <select name="specialtyId" defaultValue={specialtyId} className="input">
-            <option value="">Todas</option>
-            {specialties.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        </FilterField>
-        <FilterField label="Profissional" className="min-w-52">
-          <input name="professional" defaultValue={professionalQ} list="f-professionals" placeholder="Digite para buscar…" autoComplete="off" className="input" />
-          <datalist id="f-professionals">{professionals.map((p) => <option key={p.id} value={p.name} />)}</datalist>
-        </FilterField>
+        {!own && (
+          <>
+            <FilterField label="Especialidade" className="min-w-44">
+              <select name="specialtyId" defaultValue={specialtyId} className="input">
+                <option value="">Todas</option>
+                {specialties.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </FilterField>
+            <FilterField label="Profissional" className="min-w-52">
+              <input name="professional" defaultValue={professionalQ} list="f-professionals" placeholder="Digite para buscar…" autoComplete="off" className="input" />
+              <datalist id="f-professionals">{professionals.map((p) => <option key={p.id} value={p.name} />)}</datalist>
+            </FilterField>
+          </>
+        )}
         <FilterField label="Atendimentos de">
           <input type="date" name="from" defaultValue={from} className="input" />
         </FilterField>

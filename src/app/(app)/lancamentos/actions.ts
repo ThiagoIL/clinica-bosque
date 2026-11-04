@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { runAction } from "@/lib/action";
+import { assertOwnProfessional } from "@/lib/scope";
 import {
   MAX_OCCURRENCES, addMinutes, addMonths, dateOnly, endOfMonth, isDateString, localParts, occurrenceDates, zoned,
 } from "@/lib/dates";
@@ -47,7 +48,8 @@ export async function createEngagement(_: FormState, formData: FormData): Promis
   if (parsed.state) return parsed.state;
   const d = parsed.data;
 
-  return runAction("LANCAMENTOS", formData, async () => {
+  return runAction("LANCAMENTOS", formData, async (user) => {
+    await assertOwnProfessional(user.id, d.professionalId);
     // ── datas das sessões ──
     const weekdays = [...new Set((d.weekdays ?? "").split(",").filter(Boolean).map(Number))].filter(
       (n) => Number.isInteger(n) && n >= 0 && n <= 6,
@@ -98,6 +100,7 @@ export async function createEngagement(_: FormState, formData: FormData): Promis
     if (!patient || !professional || !service) throw new UserError("Paciente, profissional ou serviço não encontrado.");
     if (!patient.active) throw new UserError("Este paciente está inativo.", { patientId: "Paciente inativo" });
     if (!professional.active) throw new UserError("Este profissional está inativo.", { professionalId: "Profissional inativo" });
+    if (!professional.attends) throw new UserError("Este cadastro não atende pacientes.", { professionalId: "Não atende pacientes" });
 
     const slots = dates.map((date) => {
       const startsAt = zoned(date, d.startTime);
@@ -228,7 +231,8 @@ export async function updateEngagement(_: FormState, formData: FormData): Promis
   if (parsed.state) return parsed.state;
   const d = parsed.data;
 
-  return runAction("LANCAMENTOS", formData, async () => {
+  return runAction("LANCAMENTOS", formData, async (user) => {
+    await assertOwnProfessional(user.id, d.professionalId);
     await db.$transaction(async (tx) => {
       const e = await tx.engagement.findUnique({
         where: { id: d.id },
@@ -240,6 +244,7 @@ export async function updateEngagement(_: FormState, formData: FormData): Promis
         },
       });
       if (!e) throw new UserError("Lançamento não encontrado.");
+      await assertOwnProfessional(user.id, e.professionalId);
       if (e.status === "CANCELED") throw new UserError("Lançamento cancelado não pode ser editado.");
 
       const [professional, service] = await Promise.all([
@@ -310,8 +315,11 @@ const idSchema = z.object({ id: selectId("o lançamento") });
 export async function cancelEngagement(_: FormState, formData: FormData): Promise<FormState> {
   const parsed = parseForm(idSchema, formData);
   if (parsed.state) return parsed.state;
-  return runAction("LANCAMENTOS", formData, async () => {
+  return runAction("LANCAMENTOS", formData, async (user) => {
     const id = parsed.data.id;
+    const target = await db.engagement.findUnique({ where: { id }, select: { professionalId: true } });
+    if (!target) throw new UserError("Lançamento não encontrado.");
+    await assertOwnProfessional(user.id, target.professionalId);
     await db.$transaction(async (tx) => {
       await tx.engagement.update({ where: { id }, data: { status: "CANCELED" } });
       await tx.appointment.updateMany({
@@ -338,10 +346,11 @@ export async function deleteEngagement(_: FormState, formData: FormData): Promis
   if (parsed.state) return parsed.state;
   const { id, redirect } = parsed.data;
 
-  return runAction("LANCAMENTOS", formData, async () => {
+  return runAction("LANCAMENTOS", formData, async (user) => {
     await db.$transaction(async (tx) => {
-      const e = await tx.engagement.findUnique({ where: { id }, select: { id: true, entries: { select: { status: true } } } });
+      const e = await tx.engagement.findUnique({ where: { id }, select: { id: true, professionalId: true, entries: { select: { status: true } } } });
       if (!e) throw new UserError("Lançamento não encontrado.");
+      await assertOwnProfessional(user.id, e.professionalId);
       const paid = e.entries.filter((x) => x.status === "PAID").length;
       if (paid > 0) {
         throw new UserError(

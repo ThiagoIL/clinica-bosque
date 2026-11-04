@@ -32,9 +32,11 @@ export async function saveEvolution(_: FormState, formData: FormData): Promise<F
         patientId: appointment.patientId,
         professionalId: appointment.professionalId,
         authorId: user.id,
+        updatedById: user.id,
         content,
       },
-      update: { content },
+      // quem altera fica registrado (pode ser o administrador, não só o profissional do atendimento)
+      update: { content, updatedById: user.id },
     });
     return { success: "Evolução salva." };
   });

@@ -8,6 +8,7 @@ import { appointmentStatusLabel } from "@/lib/labels";
 import { appointmentColors, appointmentTone } from "@/lib/status";
 import { getAccess, requireUser } from "@/lib/auth";
 import { levelOf } from "@/lib/access";
+import { ownProfessionalId } from "@/lib/scope";
 import type { ModuleKey } from "@/lib/modules";
 import { EXPIRING_DAYS } from "@/lib/contracts";
 import { Badge, Card, LinkButton, PageHeader, Stat, param } from "@/components/ui/primitives";
@@ -23,6 +24,9 @@ export default async function DashboardPage({
   const access = await getAccess();
   const can = (m: ModuleKey) => levelOf(access, m) !== "NONE";
   const denied = param((await searchParams).acesso) === "negado";
+  // o profissional logado vê só os próprios atendimentos
+  const own = await ownProfessionalId(user.id);
+  const ownFilter = own ? { professionalId: own } : {};
 
   const today = todayString();
   const todayDate = dateOnly(today);
@@ -35,7 +39,7 @@ export default async function DashboardPage({
   const [appointmentsToday, upcomingCount, patientCount, finance, stockItems, contractAlerts] = await Promise.all([
     can("AGENDA")
       ? db.appointment.findMany({
-          where: { startsAt: { gte: zoned(today, "00:00"), lt: zoned(addDays(today, 1), "00:00") }, status: { not: "CANCELED" } },
+          where: { startsAt: { gte: zoned(today, "00:00"), lt: zoned(addDays(today, 1), "00:00") }, status: { not: "CANCELED" }, ...ownFilter },
           orderBy: { startsAt: "asc" },
           include: {
             patient: { select: { name: true } },
@@ -46,7 +50,7 @@ export default async function DashboardPage({
       : [],
     can("AGENDA")
       ? db.appointment.count({
-          where: { startsAt: { gte: zoned(addDays(today, 1), "00:00"), lt: zoned(addDays(today, 8), "00:00") }, status: { in: ["SCHEDULED", "CONFIRMED"] } },
+          where: { startsAt: { gte: zoned(addDays(today, 1), "00:00"), lt: zoned(addDays(today, 8), "00:00") }, status: { in: ["SCHEDULED", "CONFIRMED"] }, ...ownFilter },
         })
       : 0,
     can("PACIENTES") ? db.patient.count({ where: { active: true } }) : 0,

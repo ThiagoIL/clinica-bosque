@@ -30,7 +30,7 @@ export default async function UsersPage({
   const professionals =
     editId !== undefined
       ? await db.professional.findMany({
-          where: { OR: [{ active: true, user: null }, ...(editing?.professionalId ? [{ id: editing.professionalId }] : [])] },
+          where: { OR: [{ active: true, attends: true, user: null }, ...(editing?.professionalId ? [{ id: editing.professionalId }] : [])] },
           orderBy: { name: "asc" },
           select: { id: true, name: true },
         })
@@ -69,7 +69,7 @@ export default async function UsersPage({
                 hint={
                   profiles.length === 0
                     ? "Crie um perfil em “Perfis de acesso”. Usuário sem perfil não acessa os módulos."
-                    : "Vale só para o nível Usuário. Sem perfil, o usuário não acessa os módulos."
+                    : "Vale só para o nível Usuário. Sem perfil, o usuário não acessa os módulos. O financeiro (módulo e cobranças do paciente) só aparece se o perfil liberar o módulo Financeiro."
                 }
               />
               <SelectField
@@ -87,11 +87,6 @@ export default async function UsersPage({
                 required={!editing}
                 hint={editing ? "Deixe em branco para manter a senha atual (mín. 8 caracteres)" : "Mínimo de 8 caracteres"}
               />
-              <CheckboxField
-                name="canSeeFinance" label="Pode ver o financeiro"
-                defaultChecked={editing?.canSeeFinance ?? true}
-                hint="Contas, cobranças e pagamentos do paciente. Vale para o nível Usuário (também precisa do perfil liberar o módulo Financeiro), inclusive para médicos e terapeutas."
-              />
               <CheckboxField name="active" label="Usuário ativo" defaultChecked={editing?.active ?? true} />
             </FormGrid>
             <FormActions>
@@ -101,11 +96,14 @@ export default async function UsersPage({
                 <span className="ml-auto">
                   <DeleteButton
                     action={deleteUser} id={editing.id}
-                    message={`Excluir o usuário “${editing.name}”? Ele perde o acesso ao sistema. Para manter o cadastro, desative-o em vez de excluir.`}
+                    message={`Excluir o usuário “${editing.name}”? Ele perde o acesso ao sistema. Quem já registrou evolução ou situação de atendimento não pode ser excluído (desative-o).`}
                   >
                     Excluir usuário
                   </DeleteButton>
                 </span>
+              )}
+              {editing && editing.id === me.id && (
+                <span className="ml-auto text-xs text-muted">Você não pode excluir o próprio usuário.</span>
               )}
             </FormActions>
           </ActionForm>

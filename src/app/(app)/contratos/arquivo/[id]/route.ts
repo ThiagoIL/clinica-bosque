@@ -4,7 +4,7 @@ import { hasAccess, loadSnapshot } from "@/lib/access";
 
 export const dynamic = "force-dynamic";
 
-/** Download de anexo de contrato. Exige sessão e acesso ao módulo "Colaboradores e contratos". */
+/** Download de anexo de contrato. Exige sessão e acesso ao módulo "Contratos". */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
   if (!user) return new Response("Não autenticado", { status: 401 });

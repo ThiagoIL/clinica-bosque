@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { runAction } from "@/lib/action";
 import { addMinutes, dateOnly, localParts, zoned } from "@/lib/dates";
 import { describeConflicts, findConflicts } from "@/lib/scheduling";
+import { assertOwnProfessional } from "@/lib/scope";
 import { UserError, dateField, optional, parseForm, requiredEnum, selectId, timeField, type FormState } from "@/lib/form";
 
 const statusSchema = z.object({
@@ -29,13 +30,14 @@ export async function setAppointmentStatus(_: FormState, formData: FormData): Pr
   const { id, reason } = parsed.data;
   const { status, canceledBy } = resolveStatus(parsed.data.status);
 
-  return runAction(["AGENDA", "LANCAMENTOS"], formData, async () => {
+  return runAction(["AGENDA", "LANCAMENTOS"], formData, async (user) => {
     await db.$transaction(async (tx) => {
       const appointment = await tx.appointment.findUnique({
         where: { id },
         include: { patient: { select: { name: true } }, professional: { select: { name: true } } },
       });
       if (!appointment) throw new UserError("Atendimento não encontrado.");
+      await assertOwnProfessional(user.id, appointment.professionalId);
 
       // Reabrir um atendimento cancelado volta a ocupar o horário: revalida conflitos.
       if (appointment.status === "CANCELED" && status !== "CANCELED") {
@@ -54,7 +56,13 @@ export async function setAppointmentStatus(_: FormState, formData: FormData): Pr
 
       await tx.appointment.update({
         where: { id },
-        data: { status, canceledReason: status === "CANCELED" ? reason : null, canceledBy },
+        data: {
+          status,
+          canceledReason: status === "CANCELED" ? reason : null,
+          canceledBy,
+          statusChangedById: user.id,
+          statusChangedAt: new Date(),
+        },
       });
 
       // Cobrança por sessão acompanha o cancelamento / reabertura do atendimento.
@@ -85,13 +93,14 @@ export async function rescheduleAppointment(_: FormState, formData: FormData): P
   if (parsed.state) return parsed.state;
   const { id, date, time } = parsed.data;
 
-  return runAction(["AGENDA", "LANCAMENTOS"], formData, async () => {
+  return runAction(["AGENDA", "LANCAMENTOS"], formData, async (user) => {
     await db.$transaction(async (tx) => {
       const appointment = await tx.appointment.findUnique({
         where: { id },
         include: { patient: { select: { name: true } }, professional: { select: { name: true } } },
       });
       if (!appointment) throw new UserError("Atendimento não encontrado.");
+      await assertOwnProfessional(user.id, appointment.professionalId);
 
       const duration = Math.round((appointment.endsAt.getTime() - appointment.startsAt.getTime()) / 60_000);
       const startsAt = zoned(date, time);

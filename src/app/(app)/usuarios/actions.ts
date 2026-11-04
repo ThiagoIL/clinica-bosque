@@ -19,7 +19,6 @@ const userSchema = z.object({
   role: requiredEnum(["ADMIN", "STAFF"], "Nível"),
   accessProfileId: optionalId(),
   professionalId: optionalId(),
-  canSeeFinance: checkbox(),
   password: z.string().optional(),
   active: checkbox(),
 });
@@ -29,12 +28,7 @@ export async function saveUser(_: FormState, formData: FormData): Promise<FormSt
   if (parsed.state) return parsed.state;
   const { id, password, accessProfileId, ...rest } = parsed.data;
   // administradores têm acesso total; o perfil de acesso só vale para o nível "Usuário"
-  // (o administrador sempre vê o financeiro)
-  const data = {
-    ...rest,
-    accessProfileId: rest.role === "STAFF" ? accessProfileId : null,
-    canSeeFinance: rest.role === "ADMIN" ? true : rest.canSeeFinance,
-  };
+  const data = { ...rest, accessProfileId: rest.role === "STAFF" ? accessProfileId : null };
 
   return runAction("ADMIN", formData, async (current) => {
     if (current.role !== "ADMIN") throw new UserError("Somente administradores podem gerenciar usuários.");
@@ -103,7 +97,17 @@ export async function deleteUser(_: FormState, formData: FormData): Promise<Form
       const others = await db.user.count({ where: { role: "ADMIN", active: true, id: { not: id } } });
       if (others === 0) throw new UserError("É necessário manter ao menos um administrador ativo.");
     }
-    // as anotações de pacientes escritas por ele ficam sem autor
+    // quem já registrou algo (evolução, situação de atendimento, anotação) fica no histórico com o nome: só desativar
+    const [evolutions, statusChanges, notes] = await Promise.all([
+      db.evolution.count({ where: { OR: [{ authorId: id }, { updatedById: id }] } }),
+      db.appointment.count({ where: { statusChangedById: id } }),
+      db.patientNote.count({ where: { authorId: id } }),
+    ]);
+    if (evolutions + statusChanges + notes > 0) {
+      throw new UserError(
+        `${target.name} tem registros no sistema (${evolutions} evolução(ões), ${statusChanges} situação(ões) de atendimento, ${notes} anotação(ões)) e não pode ser excluído, para o histórico manter o nome. Desmarque “Usuário ativo” para bloquear o acesso.`,
+      );
+    }
     await db.user.delete({ where: { id } });
     return { redirectTo: "/usuarios" };
   });

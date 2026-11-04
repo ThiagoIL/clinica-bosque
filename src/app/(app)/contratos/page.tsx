@@ -24,7 +24,7 @@ export default async function ContractsPage({
 }) {
   const sp = await searchParams;
   const status = param(sp.status) ?? "active";
-  const collaboratorId = param(sp.collaborator) ?? "";
+  const professionalId = param(sp.professional) ?? "";
   const q = param(sp.q)?.trim() ?? "";
   const page = Math.max(1, Number(param(sp.page)) || 1);
 
@@ -32,13 +32,13 @@ export default async function ContractsPage({
   const soon = dateOnly(addDays(todayString(), EXPIRING_DAYS));
 
   const base: Prisma.ContractWhereInput = {
-    ...(collaboratorId ? { collaboratorId } : {}),
+    ...(professionalId ? { professionalId } : {}),
     ...(q
       ? {
           OR: [
             { title: { contains: q, mode: "insensitive" } },
             { code: { contains: q, mode: "insensitive" } },
-            { collaborator: { name: { contains: q, mode: "insensitive" } } },
+            { professional: { name: { contains: q, mode: "insensitive" } } },
           ],
         }
       : {}),
@@ -52,25 +52,25 @@ export default async function ContractsPage({
     : {};
   const where: Prisma.ContractWhereInput = { AND: [base, statusWhere] };
 
-  const [contracts, total, activeCount, expiringCount, expiredCount, endedCount, collaborators] = await Promise.all([
+  const [contracts, total, activeCount, expiringCount, expiredCount, endedCount, professionals] = await Promise.all([
     db.contract.findMany({
       where,
       orderBy: [{ status: "asc" }, { endDate: { sort: "asc", nulls: "last" } }, { createdAt: "desc" }],
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      include: { collaborator: { select: { name: true } }, _count: { select: { files: true } } },
+      include: { professional: { select: { name: true } }, _count: { select: { files: true } } },
     }),
     db.contract.count({ where }),
     db.contract.count({ where: { AND: [base, { status: "ACTIVE" }] } }),
     db.contract.count({ where: { AND: [base, { status: "ACTIVE", endDate: { gte: today, lte: soon } }] } }),
     db.contract.count({ where: { AND: [base, { status: "ACTIVE", endDate: { lt: today } }] } }),
     db.contract.count({ where: { AND: [base, { status: "ENDED" }] } }),
-    db.collaborator.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    db.professional.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
 
   const tabHref = (value: string) => {
     const sp2 = new URLSearchParams();
-    if (collaboratorId) sp2.set("collaborator", collaboratorId);
+    if (professionalId) sp2.set("professional", professionalId);
     if (q) sp2.set("q", q);
     sp2.set("status", value);
     return `/contratos?${sp2.toString()}`;
@@ -80,9 +80,9 @@ export default async function ContractsPage({
     <>
       <PageHeader
         title="Contratos"
-        description="Gestão dos contratos com colaboradores: ativos, a vencer, vencidos e encerrados, com anexos."
+        description="Gestão dos contratos com profissionais e fornecedores: ativos, a vencer, vencidos e encerrados, com anexos."
         actions={
-          <LinkButton href={`/contratos/novo${collaboratorId ? `?collaborator=${collaboratorId}` : ""}`}>
+          <LinkButton href={`/contratos/novo${professionalId ? `?professional=${professionalId}` : ""}`}>
             <Plus className="size-4" /> Novo contrato
           </LinkButton>
         }
@@ -109,13 +109,13 @@ export default async function ContractsPage({
 
       <FilterBar action="/contratos">
         <input type="hidden" name="status" value={status} />
-        <FilterField label="Colaborador" className="min-w-52">
-          <select name="collaborator" defaultValue={collaboratorId} className="input">
+        <FilterField label="Profissional / fornecedor" className="min-w-52">
+          <select name="professional" defaultValue={professionalId} className="input">
             <option value="">Todos</option>
-            {collaborators.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {professionals.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </FilterField>
-        <FilterField label="Buscar (título, nº ou colaborador)" className="min-w-64 flex-1">
+        <FilterField label="Buscar (título, nº ou nome)" className="min-w-64 flex-1">
           <input name="q" defaultValue={q} className="input" placeholder="Digite para buscar…" />
         </FilterField>
       </FilterBar>
@@ -131,7 +131,7 @@ export default async function ContractsPage({
           <table className="table">
             <thead>
               <tr>
-                <th>Colaborador</th><th>Contrato</th><th>Vigência</th><th className="text-right">Valor</th><th>Anexos</th><th>Situação</th><th />
+                <th>Profissional / fornecedor</th><th>Contrato</th><th>Vigência</th><th className="text-right">Valor</th><th>Anexos</th><th>Situação</th><th />
               </tr>
             </thead>
             <tbody>
@@ -139,7 +139,7 @@ export default async function ContractsPage({
                 const st = contractDisplay(c);
                 return (
                   <tr key={c.id}>
-                    <td className="font-medium">{c.collaborator.name}</td>
+                    <td className="font-medium">{c.professional.name}</td>
                     <td>
                       <Link href={`/contratos/${c.id}`} className="font-medium text-brand-800 hover:underline">{c.title}</Link>
                       {c.code && <p className="text-xs text-muted">Nº {c.code}</p>}
@@ -172,7 +172,7 @@ export default async function ContractsPage({
       )}
       <Pagination
         page={page} pageSize={PAGE_SIZE} total={total} basePath="/contratos"
-        params={{ status, collaborator: collaboratorId, q }}
+        params={{ status, professional: professionalId, q }}
       />
     </>
   );

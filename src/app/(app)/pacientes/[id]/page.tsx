@@ -178,6 +178,8 @@ async function SessionsTab({ patientId }: { patientId: string }) {
       take: 100,
       include: {
         professional: { select: { name: true } },
+        author: { select: { name: true } },
+        updatedBy: { select: { name: true } },
         appointment: { select: { startsAt: true, service: { select: { name: true } } } },
       },
     }),
@@ -227,6 +229,10 @@ async function SessionsTab({ patientId }: { patientId: string }) {
                     {e.appointment.service ? ` · ${e.appointment.service.name}` : ""}
                   </p>
                   <p className="mt-1 whitespace-pre-wrap">{e.content}</p>
+                  <p className="mt-2 text-xs text-muted">
+                    Registrada por {e.author?.name ?? "usuário removido"}
+                    {e.updatedBy && e.updatedAt.getTime() - e.createdAt.getTime() > 1000 ? ` · alterada por ${e.updatedBy.name} em ${formatDateTime(e.updatedAt)}` : ""}
+                  </p>
                 </li>
               ))}
             </ul>

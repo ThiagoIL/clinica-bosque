@@ -21,15 +21,15 @@ export default async function MovementsPage({
   const page = Math.max(1, Number(param(sp.page)) || 1);
   const where = itemId ? { itemId } : {};
 
-  const [items, collaborators, movements, total] = await Promise.all([
+  const [items, professionals, movements, total] = await Promise.all([
     db.stockItem.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
-    db.collaborator.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    db.professional.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     db.stockMovement.findMany({
       where,
       orderBy: [{ occurredOn: "desc" }, { createdAt: "desc" }],
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      include: { item: { select: { name: true, unit: true } }, collaborator: { select: { name: true } } },
+      include: { item: { select: { name: true, unit: true } }, professional: { select: { name: true } } },
     }),
     db.stockMovement.count({ where }),
   ]);
@@ -61,8 +61,8 @@ export default async function MovementsPage({
             <TextField name="reason" label="Motivo / observação" span={2} />
             <TextField name="unitCost" label="Custo unitário (R$) — só entradas" inputMode="decimal" />
             <SelectField
-              name="collaboratorId" label="Colaborador / fornecedor (entradas)"
-              options={collaborators.map((s) => ({ value: s.id, label: s.name }))}
+              name="professionalId" label="Favorecido (profissional ou fornecedor) (entradas)"
+              options={professionals.map((s) => ({ value: s.id, label: s.name }))}
             />
             <CheckboxField name="createPayable" label="Gerar conta a pagar da compra" hint="Valor = custo unitário × quantidade" span={2} />
             <TextField name="dueDate" label="Vencimento da conta" type="date" hint="Em branco: data da entrada" />
@@ -90,7 +90,7 @@ export default async function MovementsPage({
             <thead>
               <tr>
                 <th>Data</th><th>Item</th><th>Tipo</th><th className="text-right">Qtd.</th>
-                <th className="text-right">Saldo</th><th className="text-right">Custo un.</th><th>Colaborador / fornecedor</th><th>Motivo</th>
+                <th className="text-right">Saldo</th><th className="text-right">Custo un.</th><th>Favorecido (profissional ou fornecedor)</th><th>Motivo</th>
               </tr>
             </thead>
             <tbody>
@@ -108,7 +108,7 @@ export default async function MovementsPage({
                   </td>
                   <td className="text-right tabular-nums">{m.balanceAfter}</td>
                   <td className="text-right tabular-nums">{m.unitCostCents != null ? formatMoney(m.unitCostCents) : "—"}</td>
-                  <td>{m.collaborator?.name ?? "—"}</td>
+                  <td>{m.professional?.name ?? "—"}</td>
                   <td className="text-muted">{m.reason ?? "—"}</td>
                 </tr>
               ))}

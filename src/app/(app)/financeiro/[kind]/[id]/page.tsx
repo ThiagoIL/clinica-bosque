@@ -33,7 +33,7 @@ export default async function EntryPage({ params }: { params: Promise<{ kind: st
     getFinanceOptions(kind),
     income
       ? db.patient.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } })
-      : db.collaborator.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+      : db.professional.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
   const st = entryDisplayStatus(entry);
   const pending = entry.status === "PENDING";
@@ -63,7 +63,7 @@ export default async function EntryPage({ params }: { params: Promise<{ kind: st
                   />
                 ) : (
                   <SelectField
-                    name="collaboratorId" label="Colaborador / fornecedor" defaultValue={entry.collaboratorId}
+                    name="professionalId" label="Favorecido (profissional ou fornecedor)" defaultValue={entry.professionalId}
                     options={parties.map((p) => ({ value: p.id, label: p.name }))}
                   />
                 )}
@@ -79,8 +79,8 @@ export default async function EntryPage({ params }: { params: Promise<{ kind: st
               <Info label="Vencimento" value={formatDate(entry.dueDate)} />
               <Info label="Categoria" value={options.categories.find((c) => c.value === entry.categoryId)?.label ?? "—"} />
               <Info
-                label={income ? "Paciente" : "Colaborador / fornecedor"}
-                value={parties.find((p) => p.id === (income ? entry.patientId : entry.collaboratorId))?.name ?? "—"}
+                label={income ? "Paciente" : "Favorecido (profissional ou fornecedor)"}
+                value={parties.find((p) => p.id === (income ? entry.patientId : entry.professionalId))?.name ?? "—"}
               />
               <Info label="Observações" value={entry.notes ?? "—"} />
             </dl>

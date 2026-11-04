@@ -22,7 +22,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
   const contract = await db.contract.findUnique({
     where: { id },
     include: {
-      collaborator: { select: { id: true, name: true } },
+      professional: { select: { id: true, name: true } },
       files: {
         orderBy: { createdAt: "desc" },
         select: { id: true, fileName: true, mimeType: true, sizeBytes: true, createdAt: true },
@@ -31,8 +31,8 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
   });
   if (!contract) notFound();
 
-  const collaborators = await db.collaborator.findMany({
-    where: { OR: [{ active: true }, { id: contract.collaboratorId }] },
+  const professionals = await db.professional.findMany({
+    where: { OR: [{ active: true }, { id: contract.professionalId }] },
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });
@@ -43,7 +43,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
     <>
       <PageHeader
         title={contract.title}
-        description={contract.collaborator.name}
+        description={contract.professional.name}
         back={{ href: "/contratos", label: "Contratos" }}
         actions={<Badge tone={st.tone}>{st.label}</Badge>}
       />
@@ -51,7 +51,7 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
       <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
         <div className="space-y-6">
           <Card title="Dados do contrato">
-            <ContractForm contract={contract} collaborators={collaborators} />
+            <ContractForm contract={contract} professionals={professionals} />
           </Card>
 
           <Card title="Anexos" description={`Até ${MAX_FILES_PER_UPLOAD} arquivos por envio, ${formatBytes(MAX_FILE_BYTES)} no total (PDF, imagens, Word, Excel…)`}>
@@ -107,10 +107,10 @@ export default async function ContractPage({ params }: { params: Promise<{ id: s
                 </>
               )}
               <div>
-                <dt className="text-xs text-muted">Colaborador</dt>
+                <dt className="text-xs text-muted">Profissional / fornecedor</dt>
                 <dd>
-                  <Link href={`/contratos?collaborator=${contract.collaborator.id}&status=all`} className="text-brand-700 hover:underline">
-                    {contract.collaborator.name}
+                  <Link href={`/contratos?professional=${contract.professional.id}&status=all`} className="text-brand-700 hover:underline">
+                    {contract.professional.name}
                   </Link>
                 </dd>
               </div>

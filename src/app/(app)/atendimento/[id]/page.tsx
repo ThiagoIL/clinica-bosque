@@ -23,7 +23,8 @@ export default async function AttendanceDetailPage({ params }: { params: Promise
         patient: { select: { id: true, name: true } },
         professional: { select: { name: true } },
         service: { select: { name: true } },
-        evolution: true,
+        evolution: { include: { author: { select: { name: true } }, updatedBy: { select: { name: true } } } },
+        statusChangedBy: { select: { name: true } },
       },
     }),
     db.user.findUnique({ where: { id: user.id }, select: { role: true, professionalId: true } }),
@@ -60,7 +61,7 @@ export default async function AttendanceDetailPage({ params }: { params: Promise
       <PageHeader
         title={appointment.patient.name}
         description={`${appointment.service?.name ?? "Atendimento"} · ${formatDate(day)} ${formatTime(appointment.startsAt)}–${formatTime(appointment.endsAt)} · ${appointment.professional.name}`}
-        back={{ href: `/atendimento?date=${day}`, label: "Atendimento" }}
+        back={{ href: `/atendimento?from=${day}&to=${day}`, label: "Atendimento" }}
         actions={
           <>
             <Badge tone={appointmentTone(appointment.status)}>
@@ -80,13 +81,25 @@ export default async function AttendanceDetailPage({ params }: { params: Promise
               <FormActions>
                 <SubmitButton>{appointment.evolution ? "Salvar evolução" : "Registrar evolução"}</SubmitButton>
                 {appointment.evolution && (
-                  <span className="text-xs text-muted">Última alteração em {formatDateTime(appointment.evolution.updatedAt)}</span>
+                  <span className="text-xs text-muted">
+                    Registrada por {appointment.evolution.author?.name ?? "usuário removido"} em {formatDateTime(appointment.evolution.createdAt)}
+                    {appointment.evolution.updatedBy && appointment.evolution.updatedAt.getTime() - appointment.evolution.createdAt.getTime() > 1000
+                      ? ` · última alteração por ${appointment.evolution.updatedBy.name} em ${formatDateTime(appointment.evolution.updatedAt)}`
+                      : ""}
+                  </span>
                 )}
               </FormActions>
             </ActionForm>
           </Card>
 
-          <Card title="Situação do atendimento">
+          <Card
+            title="Situação do atendimento"
+            description={
+              appointment.statusChangedBy && appointment.statusChangedAt
+                ? `Informada por ${appointment.statusChangedBy.name} em ${formatDateTime(appointment.statusChangedAt)}`
+                : undefined
+            }
+          >
             <AppointmentActions appointment={appointment} />
           </Card>
         </div>

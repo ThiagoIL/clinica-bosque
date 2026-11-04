@@ -23,6 +23,8 @@ export type AgendaItemInfo = {
   startsAt: Date;
   engagement: { id: string; number: number } | null;
   hasEvolution: boolean;
+  /** Quem informou a situação por último, ex.: "Maria em 28/10/2026 10:05". */
+  statusBy: string | null;
   /** O usuário é o profissional do atendimento (ou administrador): pode abrir a tela de atendimento. */
   canAttend: boolean;
 };
@@ -113,6 +115,7 @@ export function AgendaItem({
 
               <div className="mt-2">
                 <Badge tone={appointmentTone(info.status)}>{appointmentStatusLabel(info.status, info.canceledBy)}</Badge>
+                {info.statusBy && <span className="ml-2 text-xs text-muted">por {info.statusBy}</span>}
               </div>
 
               <div className="mt-3 flex flex-wrap items-center gap-2">

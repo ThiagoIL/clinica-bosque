@@ -61,13 +61,10 @@ const NAV: NavGroup[] = [
     ],
   },
   {
-    id: "colaboradores",
-    title: "Colaboradores",
+    id: "contratos",
+    title: "Contratos",
     icon: Handshake,
-    items: [
-      { href: "/colaboradores", label: "Colaboradores", access: "CONTRATOS" },
-      { href: "/contratos", label: "Contratos", access: "CONTRATOS" },
-    ],
+    items: [{ href: "/contratos", label: "Contratos", access: "CONTRATOS" }],
   },
   {
     id: "administracao",

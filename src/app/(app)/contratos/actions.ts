@@ -9,7 +9,7 @@ import { UserError, dateField, optional, optionalDate, optionalMoney, parseForm,
 
 const contractSchema = z.object({
   id: z.string().optional(),
-  collaboratorId: selectId("o colaborador"),
+  professionalId: selectId("o profissional / fornecedor"),
   title: required("Título", 150),
   code: optional(40),
   description: optional(2000),
@@ -28,8 +28,8 @@ export async function saveContract(_: FormState, formData: FormData): Promise<Fo
     if (endDate && endDate < startDate) {
       throw new UserError("A data final deve ser igual ou posterior ao início.", { endDate: "Anterior ao início" });
     }
-    if (!(await db.collaborator.findUnique({ where: { id: rest.collaboratorId } }))) {
-      throw new UserError("Colaborador não encontrado.");
+    if (!(await db.professional.findUnique({ where: { id: rest.professionalId } }))) {
+      throw new UserError("Profissional / fornecedor não encontrado.");
     }
     const data = { ...rest, valueCents: value, startDate: dateOnly(startDate), endDate: endDate ? dateOnly(endDate) : null };
     if (id) {

@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+import { requireUser } from "@/lib/auth";
+import { ownProfessionalId } from "@/lib/scope";
 import { isDateString, isTimeString, todayString } from "@/lib/dates";
 import { PageHeader, EmptyState, LinkButton, param } from "@/components/ui/primitives";
 import { EngagementForm } from "./engagement-form";
@@ -11,10 +13,12 @@ export default async function NewEngagementPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const sp = await searchParams;
+  // o profissional logado só lança para si mesmo
+  const own = await ownProfessionalId((await requireUser()).id);
   const [patients, professionals, services, plans, prices] = await Promise.all([
     db.patient.findMany({ where: { active: true }, orderBy: { name: "asc" }, select: { id: true, name: true, healthPlanId: true } }),
     db.professional.findMany({
-      where: { active: true },
+      where: { active: true, attends: true, ...(own ? { id: own } : {}) },
       orderBy: { name: "asc" },
       select: { id: true, name: true, specialty: { select: { name: true } } },
     }),
@@ -68,7 +72,7 @@ export default async function NewEngagementPage({
           }))}
           defaults={{
             patientId: param(sp.patientId),
-            professionalId: param(sp.professionalId),
+            professionalId: own ?? param(sp.professionalId),
             date: isDateString(date) ? date : todayString(),
             time: isTimeString(time) ? time : "08:00",
           }}

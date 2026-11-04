@@ -11,6 +11,7 @@ import { AppointmentActions } from "@/components/appointment-actions";
 import { cancelEngagement, deleteEngagement } from "../actions";
 import { getAccess } from "@/lib/auth";
 import { levelOf } from "@/lib/access";
+import { ownProfessionalId } from "@/lib/scope";
 
 export const metadata = { title: "Lançamento" };
 
@@ -29,7 +30,12 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
   });
   if (!engagement) notFound();
 
-  const canFinance = levelOf(await getAccess(), "FINANCEIRO") !== "NONE";
+  const access = await getAccess();
+  // o profissional logado só vê os próprios lançamentos
+  const own = access.user ? await ownProfessionalId(access.user.id) : null;
+  if (own && own !== engagement.professionalId) notFound();
+
+  const canFinance = levelOf(access, "FINANCEIRO") !== "NONE";
   const paid = engagement.entries.filter((e) => e.status === "PAID").reduce((s, e) => s + (e.paidAmountCents ?? 0), 0);
   const open = engagement.entries.filter((e) => e.status === "PENDING").reduce((s, e) => s + e.amountCents, 0);
 

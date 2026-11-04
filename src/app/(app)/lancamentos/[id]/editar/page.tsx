@@ -5,6 +5,8 @@ import { formatDateTime } from "@/lib/dates";
 import { WEEKDAY_OPTIONS, attendanceKindLabels, billingModeLabels, optionsOf, recurrenceLabels } from "@/lib/labels";
 import { ActionForm, DeleteButton, FormActions, FormGrid, SelectField, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
 import { Card, LinkButton, PageHeader } from "@/components/ui/primitives";
+import { requireUser } from "@/lib/auth";
+import { ownProfessionalId } from "@/lib/scope";
 import { deleteEngagement, updateEngagement } from "../../actions";
 
 export const metadata = { title: "Editar lançamento" };
@@ -21,10 +23,15 @@ export default async function EditEngagementPage({ params }: { params: Promise<{
     },
   });
   if (!e) notFound();
+  const own = await ownProfessionalId((await requireUser()).id);
+  if (own && own !== e.professionalId) notFound();
   if (e.status === "CANCELED") redirect(`/lancamentos/${id}`);
 
   const [professionals, services] = await Promise.all([
-    db.professional.findMany({ where: { OR: [{ active: true }, { id: e.professionalId }] }, orderBy: { name: "asc" } }),
+    db.professional.findMany({
+      where: own ? { id: own } : { OR: [{ active: true, attends: true }, { id: e.professionalId }] },
+      orderBy: { name: "asc" },
+    }),
     db.service.findMany({ where: { OR: [{ active: true }, { id: e.serviceId }] }, orderBy: { name: "asc" } }),
   ]);
 

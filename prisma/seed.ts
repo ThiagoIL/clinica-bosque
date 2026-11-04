@@ -64,10 +64,11 @@ async function main() {
     ],
   });
 
-  await db.collaborator.createMany({
+  // fornecedores ficam em Profissionais, sem agenda
+  await db.professional.createMany({
     data: [
-      { name: "Papelaria Central", role: "Fornecedor de materiais", phone: "1133334444" },
-      { name: "MedSupply Distribuidora", role: "Fornecedor de materiais", phone: "1144445555", email: "vendas@medsupply.example" },
+      { name: "Papelaria Central", role: "Fornecedor de materiais", phone: "1133334444", attends: false },
+      { name: "MedSupply Distribuidora", role: "Fornecedor de materiais", phone: "1144445555", email: "vendas@medsupply.example", attends: false },
     ],
   });
 

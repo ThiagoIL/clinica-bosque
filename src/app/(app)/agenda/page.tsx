@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import type { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import {
-  addDays, addMonths, formatDate, formatTime, isDateString, localParts, monthName, monthTitle,
+  addDays, addMonths, formatDate, formatDateTime, formatTime, isDateString, localParts, monthName, monthTitle,
   startOfMonth, startOfWeek, todayString, weekday, weekdayName, weekdayShort, zoned,
 } from "@/lib/dates";
 import { appointmentStatusLabel, appointmentStatusLabels } from "@/lib/labels";
@@ -13,6 +13,7 @@ import { LinkButton, PageHeader, param } from "@/components/ui/primitives";
 import { AgendaItem, type AgendaItemInfo } from "@/components/agenda-item";
 import { getAccess } from "@/lib/auth";
 import { levelOf } from "@/lib/access";
+import { ownProfessionalId } from "@/lib/scope";
 
 export const metadata = { title: "Agenda" };
 
@@ -26,6 +27,7 @@ type Item = Prisma.AppointmentGetPayload<{
     service: { select: { name: true } };
     engagement: { select: { id: true; number: true } };
     evolution: { select: { id: true } };
+    statusChangedBy: { select: { name: true } };
   };
 }>;
 
@@ -47,15 +49,18 @@ export default async function AgendaPage({
   let professionalQ = param(sp.professional)?.trim() ?? "";
   const patientIdParam = param(sp.patientId) ?? "";
   const professionalIdParam = param(sp.professionalId) ?? "";
+  const access = await getAccess();
+  // profissional logado (usuário comum ligado a um profissional): só enxerga os próprios atendimentos
+  const own = access.user ? await ownProfessionalId(access.user.id) : null;
   if (!patientQ && patientIdParam) {
     patientQ = (await db.patient.findUnique({ where: { id: patientIdParam }, select: { name: true } }))?.name ?? "";
   }
-  if (!professionalQ && professionalIdParam) {
+  if (own) professionalQ = "";
+  else if (!professionalQ && professionalIdParam) {
     professionalQ = (await db.professional.findUnique({ where: { id: professionalIdParam }, select: { name: true } }))?.name ?? "";
   }
   const showCanceled = param(sp.canceled) === "1";
   const selectedId = param(sp.a);
-  const access = await getAccess();
   const canLaunch = levelOf(access, "LANCAMENTOS") === "EDIT";
   const me = access.user
     ? await db.user.findUnique({ where: { id: access.user.id }, select: { role: true, professionalId: true } })
@@ -78,6 +83,7 @@ export default async function AgendaPage({
     db.appointment.findMany({
       where: {
         startsAt: { gte: rangeStart, lt: rangeEnd },
+        ...(own ? { professionalId: own } : {}),
         ...(professionalQ || specialtyId
           ? {
               professional: {
@@ -96,10 +102,11 @@ export default async function AgendaPage({
         service: { select: { name: true } },
         engagement: { select: { id: true, number: true } },
         evolution: { select: { id: true } },
+        statusChangedBy: { select: { name: true } },
       },
     }),
     db.professional.findMany({
-      where: { active: true, ...(specialtyId ? { specialtyId } : {}) },
+      where: { active: true, attends: true, ...(own ? { id: own } : {}), ...(specialtyId ? { specialtyId } : {}) },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
@@ -110,7 +117,7 @@ export default async function AgendaPage({
   // ids exatos para pré-preencher "Novo lançamento" quando o nome digitado é de um cadastro
   const same = (a: string, b: string) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }) === 0;
   const patientId = patientQ ? (patients.find((p) => same(p.name, patientQ))?.id ?? "") : "";
-  const professionalId = professionalQ ? (professionals.find((p) => same(p.name, professionalQ))?.id ?? "") : "";
+  const professionalId = own ?? (professionalQ ? (professionals.find((p) => same(p.name, professionalQ))?.id ?? "") : "");
 
   // a tela de atendimento é do profissional do atendimento (ou do administrador)
   const toInfo: ToInfo = (a) => ({
@@ -125,6 +132,7 @@ export default async function AgendaPage({
     startsAt: a.startsAt,
     engagement: a.engagement,
     hasEvolution: !!a.evolution,
+    statusBy: a.statusChangedBy ? `${a.statusChangedBy.name}${a.statusChangedAt ? ` em ${formatDateTime(a.statusChangedAt)}` : ""}` : null,
     canAttend: !!me && (me.role === "ADMIN" || me.professionalId === a.professionalId),
   });
 
@@ -158,6 +166,7 @@ export default async function AgendaPage({
     <>
       <PageHeader
         title="Agenda"
+        description={own ? "Seus atendimentos. A agenda dos demais profissionais não aparece para o seu usuário." : undefined}
         actions={
           canLaunch ? (
             <LinkButton href={`/lancamentos/novo?date=${date}${professionalId ? `&professionalId=${professionalId}` : ""}${patientId ? `&patientId=${patientId}` : ""}`}>
@@ -197,21 +206,25 @@ export default async function AgendaPage({
 
         <form action="/agenda" method="get" className="flex flex-wrap items-end gap-3">
           <input type="hidden" name="view" value={view} />
-          <div className="min-w-44">
-            <label className="label" htmlFor="f-spec">Especialidade</label>
-            <select id="f-spec" name="specialtyId" defaultValue={specialtyId} className="input">
-              <option value="">Todas</option>
-              {specialties.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </div>
-          <div className="min-w-48">
-            <label className="label" htmlFor="f-prof">Profissional</label>
-            <input
-              id="f-prof" name="professional" defaultValue={professionalQ} list="f-professionals"
-              placeholder="Digite para buscar…" autoComplete="off" className="input"
-            />
-            <datalist id="f-professionals">{professionals.map((p) => <option key={p.id} value={p.name} />)}</datalist>
-          </div>
+          {!own && (
+            <>
+              <div className="min-w-44">
+                <label className="label" htmlFor="f-spec">Especialidade</label>
+                <select id="f-spec" name="specialtyId" defaultValue={specialtyId} className="input">
+                  <option value="">Todas</option>
+                  {specialties.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+              </div>
+              <div className="min-w-48">
+                <label className="label" htmlFor="f-prof">Profissional</label>
+                <input
+                  id="f-prof" name="professional" defaultValue={professionalQ} list="f-professionals"
+                  placeholder="Digite para buscar…" autoComplete="off" className="input"
+                />
+                <datalist id="f-professionals">{professionals.map((p) => <option key={p.id} value={p.name} />)}</datalist>
+              </div>
+            </>
+          )}
           <div className="min-w-48">
             <label className="label" htmlFor="f-pat">Paciente</label>
             <input
