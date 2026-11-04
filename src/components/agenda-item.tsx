@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import type { AppointmentStatus, CancelParty } from "@/generated/prisma/enums";
@@ -50,7 +50,7 @@ function WhatsappIcon({ className }: { className?: string }) {
 const WIDTH = 352; // 22rem
 
 /**
- * Atendimento na agenda: ao clicar no nome do paciente abre uma janelinha em cima dele, com a situação
+ * Atendimento na agenda: ao clicar no nome do paciente abre uma janela no centro da tela, com a situação
  * (confirmar, presente, ausente, cancelou), reagendamento e atalhos para o atendimento e o paciente.
  */
 export function AgendaItem({
@@ -64,59 +64,50 @@ export function AgendaItem({
   defaultOpen?: boolean;
   children: ReactNode;
 }) {
-  const trigger = useRef<HTMLButtonElement>(null);
-  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+  const [open, setOpen] = useState(false);
   // celular: o botão do WhatsApp abre o aplicativo em vez do WhatsApp Web
   const [phone, setPhone] = useState(false);
 
-  function openAt() {
-    const el = trigger.current;
-    if (!el) return;
+  function show() {
     setPhone(isTouchPhone());
-    const rect = el.getBoundingClientRect();
-    const left = Math.max(8, Math.min(rect.left + window.scrollX, window.scrollX + document.documentElement.clientWidth - WIDTH - 8));
-    // a janelinha cobre o próprio atendimento; sobe um pouco se faltar espaço embaixo
-    const room = window.innerHeight - rect.top;
-    const top = rect.top + window.scrollY - (room < 460 ? Math.min(460 - room, rect.top - 8) : 0);
-    setPos({ left, top });
+    setOpen(true);
   }
 
   useEffect(() => {
-    if (!defaultOpen) return;
-    trigger.current?.scrollIntoView({ block: "center" });
-    openAt();
+    if (defaultOpen) show();
   }, [defaultOpen]);
 
   useEffect(() => {
-    if (!pos) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setPos(null);
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [pos]);
+  }, [open]);
 
   return (
     <>
       <button
-        ref={trigger}
         type="button"
-        onClick={() => (pos ? setPos(null) : openAt())}
+        onClick={() => (open ? setOpen(false) : show())}
         aria-haspopup="dialog"
-        aria-expanded={!!pos}
+        aria-expanded={open}
         className={className}
         style={style}
         title={title}
       >
         {children}
       </button>
-      {pos &&
+      {open &&
         createPortal(
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => setPos(null)} aria-hidden />
+          // modal centralizado na tela: o fundo escurece e, se a tela for baixa, o card rola por dentro
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
+            <div className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} aria-hidden />
             <div
               role="dialog"
+              aria-modal="true"
               aria-label={`Atendimento de ${info.patientName}`}
-              className="absolute z-50 rounded-xl border border-line bg-surface p-4 text-left shadow-xl"
-              style={{ left: pos.left, top: pos.top, width: WIDTH, maxWidth: "calc(100vw - 16px)" }}
+              className="relative max-h-full overflow-y-auto overscroll-contain rounded-xl border border-line bg-surface p-4 text-left shadow-xl"
+              style={{ width: WIDTH }}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
@@ -126,7 +117,7 @@ export function AgendaItem({
                 </div>
                 <button
                   type="button"
-                  onClick={() => setPos(null)}
+                  onClick={() => setOpen(false)}
                   aria-label="Fechar"
                   className="-mr-1 -mt-1 rounded p-1 text-muted hover:bg-black/5 hover:text-ink"
                 >
@@ -190,7 +181,7 @@ export function AgendaItem({
                 </div>
               )}
             </div>
-          </>,
+          </div>,
           document.body,
         )}
     </>
