@@ -27,7 +27,24 @@ export type AgendaItemInfo = {
   statusBy: string | null;
   /** O usuário é o profissional do atendimento (ou administrador): pode abrir a tela de atendimento. */
   canAttend: boolean;
+  /** Link do WhatsApp Web com a mensagem da consulta pronta; null quando o paciente não tem telefone cadastrado. */
+  whatsapp: string | null;
 };
+
+/** Logo simplificada do WhatsApp (balão com telefone). */
+function WhatsappIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <path strokeWidth="2" d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+      <g transform="translate(6.6 6.6) scale(0.45)">
+        <path
+          strokeWidth="3.5"
+          d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+        />
+      </g>
+    </svg>
+  );
+}
 
 const WIDTH = 352; // 22rem
 
@@ -103,14 +120,39 @@ export function AgendaItem({
                   <p className="text-xs text-muted">{info.when}</p>
                   <p className="text-xs text-muted">{info.serviceName} · {info.professionalName}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setPos(null)}
-                  aria-label="Fechar"
-                  className="-mr-1 -mt-1 rounded p-1 text-muted hover:bg-black/5 hover:text-ink"
-                >
-                  <X className="size-4" />
-                </button>
+                <div className="-mr-1 -mt-1 flex shrink-0 items-center gap-1">
+                  {info.status !== "CANCELED" &&
+                    (info.whatsapp ? (
+                      // aba nomeada: os envios seguintes reaproveitam o WhatsApp Web já aberto
+                      <a
+                        href={info.whatsapp}
+                        target="whatsapp-clinica"
+                        rel="noopener"
+                        title="Enviar a consulta ao paciente pelo WhatsApp Web"
+                        aria-label="Enviar a consulta ao paciente pelo WhatsApp"
+                        className="inline-flex size-7 items-center justify-center rounded-full bg-[#25D366] text-white hover:bg-[#1fb857]"
+                      >
+                        <WhatsappIcon className="size-4" />
+                      </a>
+                    ) : (
+                      <span
+                        title="Paciente sem telefone cadastrado: cadastre um para enviar pelo WhatsApp"
+                        role="img"
+                        aria-label="Paciente sem telefone cadastrado"
+                        className="inline-flex size-7 items-center justify-center rounded-full bg-black/5 text-muted/60"
+                      >
+                        <WhatsappIcon className="size-4" />
+                      </span>
+                    ))}
+                  <button
+                    type="button"
+                    onClick={() => setPos(null)}
+                    aria-label="Fechar"
+                    className="rounded p-1 text-muted hover:bg-black/5 hover:text-ink"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
               </div>
 
               <div className="mt-2">

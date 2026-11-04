@@ -16,6 +16,7 @@ import { FiltersToggle } from "@/components/filters-toggle";
 import { getAccess } from "@/lib/auth";
 import { levelOf } from "@/lib/access";
 import { ownProfessionalId } from "@/lib/scope";
+import { appointmentMessage, whatsappLink, whatsappNumber } from "@/lib/whatsapp";
 
 export const metadata = { title: "Agenda" };
 
@@ -24,7 +25,7 @@ type View = "day" | "week" | "month";
 
 type Item = Prisma.AppointmentGetPayload<{
   include: {
-    patient: { select: { id: true; name: true } };
+    patient: { select: { id: true; name: true; phone: true; phone2: true; guardianPhone: true } };
     professional: { select: { name: true } };
     service: { select: { name: true } };
     engagement: { select: { id: true; number: true } };
@@ -101,7 +102,7 @@ export default async function AgendaPage({
       },
       orderBy: { startsAt: "asc" },
       include: {
-        patient: { select: { id: true, name: true } },
+        patient: { select: { id: true, name: true, phone: true, phone2: true, guardianPhone: true } },
         professional: { select: { name: true } },
         service: { select: { name: true } },
         engagement: { select: { id: true, number: true } },
@@ -124,7 +125,24 @@ export default async function AgendaPage({
   const professionalId = own ?? (professionalQ ? (professionals.find((p) => same(p.name, professionalQ))?.id ?? "") : "");
 
   // a tela de atendimento é do profissional do atendimento (ou do administrador)
-  const toInfo: ToInfo = (a) => ({
+  const toInfo: ToInfo = (a) => {
+    const day = localParts(a.startsAt).date;
+    // telefone do paciente; se faltar, o segundo telefone e, por fim, o do responsável
+    const number = [a.patient.phone, a.patient.phone2, a.patient.guardianPhone].map(whatsappNumber).find(Boolean) ?? null;
+    const whatsapp = number
+      ? whatsappLink(
+          number,
+          appointmentMessage({
+            patientName: a.patient.name,
+            professionalName: a.professional.name,
+            serviceName: a.service?.name ?? "Atendimento",
+            weekday: weekdayName(day),
+            date: formatDate(day),
+            time: formatTime(a.startsAt),
+          }),
+        )
+      : null;
+    return {
     id: a.id,
     patientId: a.patient.id,
     patientName: a.patient.name,
@@ -138,7 +156,9 @@ export default async function AgendaPage({
     hasEvolution: !!a.evolution,
     statusBy: a.statusChangedBy ? `${a.statusChangedBy.name}${a.statusChangedAt ? ` em ${formatDateTime(a.statusChangedAt)}` : ""}` : null,
     canAttend: !!me && (me.role === "ADMIN" || me.professionalId === a.professionalId),
-  });
+    whatsapp,
+    };
+  };
 
   const byDay = new Map<string, Item[]>();
   for (const it of items) {
