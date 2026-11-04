@@ -197,15 +197,12 @@ export function AppShell({ children, footer, access }: { children: ReactNode; fo
     <div className="min-h-screen lg:grid lg:grid-cols-[16.5rem_1fr]">
       <aside className="sticky top-0 hidden h-screen lg:block">{sidebar}</aside>
 
-      <div className="sticky top-0 z-30 flex items-center justify-between border-b border-line bg-surface px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] lg:hidden">
-        <button onClick={() => setOpen(true)} className="btn btn-ghost -ml-2 p-2" aria-label="Abrir menu">
-          <Menu className="size-5" />
-        </button>
+      {/* celular: só a identificação; o menu abre pelo botão "Menu" da barra de baixo */}
+      <div className="sticky top-0 z-30 flex items-center justify-center border-b border-line bg-surface px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] lg:hidden">
         <span className="flex items-center gap-2 font-semibold">
           <img src="/logo.jpg" alt="" width={32} height={32} className="size-8 rounded-full" />
           Clínica Bosque
         </span>
-        <span className="w-9" />
       </div>
 
       {open && (
