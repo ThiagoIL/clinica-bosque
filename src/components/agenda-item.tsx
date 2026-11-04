@@ -120,39 +120,14 @@ export function AgendaItem({
                   <p className="text-xs text-muted">{info.when}</p>
                   <p className="text-xs text-muted">{info.serviceName} · {info.professionalName}</p>
                 </div>
-                <div className="-mr-1 -mt-1 flex shrink-0 items-center gap-1">
-                  {info.status !== "CANCELED" &&
-                    (info.whatsapp ? (
-                      // aba nomeada: os envios seguintes reaproveitam o WhatsApp Web já aberto
-                      <a
-                        href={info.whatsapp}
-                        target="whatsapp-clinica"
-                        rel="noopener"
-                        title="Enviar a consulta ao paciente pelo WhatsApp Web"
-                        aria-label="Enviar a consulta ao paciente pelo WhatsApp"
-                        className="inline-flex size-7 items-center justify-center rounded-full bg-[#25D366] text-white hover:bg-[#1fb857]"
-                      >
-                        <WhatsappIcon className="size-4" />
-                      </a>
-                    ) : (
-                      <span
-                        title="Paciente sem telefone cadastrado: cadastre um para enviar pelo WhatsApp"
-                        role="img"
-                        aria-label="Paciente sem telefone cadastrado"
-                        className="inline-flex size-7 items-center justify-center rounded-full bg-black/5 text-muted/60"
-                      >
-                        <WhatsappIcon className="size-4" />
-                      </span>
-                    ))}
-                  <button
-                    type="button"
-                    onClick={() => setPos(null)}
-                    aria-label="Fechar"
-                    className="rounded p-1 text-muted hover:bg-black/5 hover:text-ink"
-                  >
-                    <X className="size-4" />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setPos(null)}
+                  aria-label="Fechar"
+                  className="-mr-1 -mt-1 rounded p-1 text-muted hover:bg-black/5 hover:text-ink"
+                >
+                  <X className="size-4" />
+                </button>
               </div>
 
               <div className="mt-2">
@@ -177,6 +152,39 @@ export function AgendaItem({
               <div className="mt-3 border-t border-line pt-3">
                 <AppointmentActions appointment={{ id: info.id, status: info.status, startsAt: info.startsAt }} />
               </div>
+
+              {info.status !== "CANCELED" && (
+                <div className="mt-3 flex items-center justify-end gap-2 border-t border-line pt-3">
+                  {info.whatsapp ? (
+                    <>
+                      <span className="text-xs text-muted">Enviar a consulta ao paciente</span>
+                      {/* aba nomeada: os envios seguintes reaproveitam o WhatsApp Web já aberto */}
+                      <a
+                        href={info.whatsapp}
+                        target="whatsapp-clinica"
+                        rel="noopener"
+                        title="Enviar a consulta ao paciente pelo WhatsApp Web"
+                        aria-label="Enviar a consulta ao paciente pelo WhatsApp"
+                        className="inline-flex size-11 items-center justify-center rounded-full bg-[#25D366] text-white shadow-sm hover:bg-[#1fb857]"
+                      >
+                        <WhatsappIcon className="size-6" />
+                      </a>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-xs text-muted">Paciente sem telefone cadastrado</span>
+                      <span
+                        title="Cadastre um telefone no paciente para enviar pelo WhatsApp"
+                        role="img"
+                        aria-label="Paciente sem telefone cadastrado"
+                        className="inline-flex size-11 items-center justify-center rounded-full bg-black/5 text-muted/60"
+                      >
+                        <WhatsappIcon className="size-6" />
+                      </span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </>,
           document.body,
