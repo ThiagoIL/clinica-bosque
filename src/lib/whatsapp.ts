@@ -52,7 +52,18 @@ export function appointmentMessage(a: AppointmentMessage): string {
   ].join("\n");
 }
 
-/** Link que abre a conversa no WhatsApp Web (o computador precisa estar com o WhatsApp conectado) já com o texto preenchido. */
-export function whatsappLink(number: string, text: string): string {
-  return `https://web.whatsapp.com/send?phone=${number}&text=${encodeURIComponent(text)}&app_absent=0`;
+/**
+ * Link da conversa com o texto já preenchido.
+ *  - computador: WhatsApp Web (precisa estar conectado);
+ *  - celular (`app`): abre direto o aplicativo do WhatsApp, inclusive com o sistema instalado na tela inicial.
+ */
+export function whatsappLink(number: string, text: string, app = false): string {
+  const query = `phone=${number}&text=${encodeURIComponent(text)}`;
+  return app ? `whatsapp://send?${query}` : `https://web.whatsapp.com/send?${query}&app_absent=0`;
+}
+
+/** O aparelho é um celular/tablet (inclui iPad que se apresenta como Mac). Só no navegador. */
+export function isTouchPhone(): boolean {
+  const ua = navigator.userAgent;
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
 }

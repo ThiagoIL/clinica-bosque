@@ -16,7 +16,7 @@ import { FiltersToggle } from "@/components/filters-toggle";
 import { getAccess } from "@/lib/auth";
 import { levelOf } from "@/lib/access";
 import { ownProfessionalId } from "@/lib/scope";
-import { appointmentMessage, whatsappLink, whatsappNumber } from "@/lib/whatsapp";
+import { appointmentMessage, whatsappNumber } from "@/lib/whatsapp";
 
 export const metadata = { title: "Agenda" };
 
@@ -130,9 +130,9 @@ export default async function AgendaPage({
     // telefone do paciente; se faltar, o segundo telefone e, por fim, o do responsável
     const number = [a.patient.phone, a.patient.phone2, a.patient.guardianPhone].map(whatsappNumber).find(Boolean) ?? null;
     const whatsapp = number
-      ? whatsappLink(
+      ? {
           number,
-          appointmentMessage({
+          text: appointmentMessage({
             patientName: a.patient.name,
             professionalName: a.professional.name,
             serviceName: a.service?.name ?? "Atendimento",
@@ -140,7 +140,7 @@ export default async function AgendaPage({
             date: formatDate(day),
             time: formatTime(a.startsAt),
           }),
-        )
+        }
       : null;
     return {
     id: a.id,

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import type { AppointmentStatus, CancelParty } from "@/generated/prisma/enums";
 import { appointmentStatusLabel } from "@/lib/labels";
+import { isTouchPhone, whatsappLink } from "@/lib/whatsapp";
 import { appointmentTone } from "@/lib/status";
 import { Badge, LinkButton } from "@/components/ui/primitives";
 import { AppointmentActions } from "@/components/appointment-actions";
@@ -27,8 +28,8 @@ export type AgendaItemInfo = {
   statusBy: string | null;
   /** O usuário é o profissional do atendimento (ou administrador): pode abrir a tela de atendimento. */
   canAttend: boolean;
-  /** Link do WhatsApp Web com a mensagem da consulta pronta; null quando o paciente não tem telefone cadastrado. */
-  whatsapp: string | null;
+  /** Número e mensagem da consulta para o WhatsApp; null quando o paciente não tem telefone cadastrado. */
+  whatsapp: { number: string; text: string } | null;
 };
 
 /** Logo simplificada do WhatsApp (balão com telefone). */
@@ -65,10 +66,13 @@ export function AgendaItem({
 }) {
   const trigger = useRef<HTMLButtonElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+  // celular: o botão do WhatsApp abre o aplicativo em vez do WhatsApp Web
+  const [phone, setPhone] = useState(false);
 
   function openAt() {
     const el = trigger.current;
     if (!el) return;
+    setPhone(isTouchPhone());
     const rect = el.getBoundingClientRect();
     const left = Math.max(8, Math.min(rect.left + window.scrollX, window.scrollX + document.documentElement.clientWidth - WIDTH - 8));
     // a janelinha cobre o próprio atendimento; sobe um pouco se faltar espaço embaixo
@@ -158,12 +162,12 @@ export function AgendaItem({
                   {info.whatsapp ? (
                     <>
                       <span className="text-xs text-muted">Enviar a consulta ao paciente</span>
-                      {/* aba nomeada: os envios seguintes reaproveitam o WhatsApp Web já aberto */}
+                      {/* celular: abre o aplicativo; computador: WhatsApp Web numa aba nomeada, reaproveitada nos envios seguintes */}
                       <a
-                        href={info.whatsapp}
-                        target="whatsapp-clinica"
+                        href={whatsappLink(info.whatsapp.number, info.whatsapp.text, phone)}
+                        target={phone ? undefined : "whatsapp-clinica"}
                         rel="noopener"
-                        title="Enviar a consulta ao paciente pelo WhatsApp Web"
+                        title={phone ? "Enviar a consulta ao paciente pelo WhatsApp" : "Enviar a consulta ao paciente pelo WhatsApp Web"}
                         aria-label="Enviar a consulta ao paciente pelo WhatsApp"
                         className="inline-flex size-11 items-center justify-center rounded-full bg-[#25D366] text-white shadow-sm hover:bg-[#1fb857]"
                       >
