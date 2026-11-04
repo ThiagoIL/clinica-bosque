@@ -1,6 +1,7 @@
 import Link from "next/link";
 import clsx from "clsx";
 import type { ComponentProps, ReactNode } from "react";
+import { FiltersToggle } from "@/components/filters-toggle";
 
 export function PageHeader({
   title,
@@ -175,11 +176,13 @@ export function Pagination({
 
 export function FilterBar({ children, action }: { children: ReactNode; action: string }) {
   return (
-    <form action={action} method="get" className="card mb-4 flex flex-wrap items-end gap-3 p-4">
-      {children}
-      <button type="submit" className="btn btn-primary">Filtrar</button>
-      <Link href={action} className="btn btn-ghost">Limpar</Link>
-    </form>
+    <FiltersToggle>
+      <form action={action} method="get" className="filter-form card mb-4 flex flex-wrap items-end gap-3 p-4">
+        {children}
+        <button type="submit" className="btn btn-primary">Filtrar</button>
+        <Link href={action} className="btn btn-ghost">Limpar</Link>
+      </form>
+    </FiltersToggle>
   );
 }
 

@@ -6,6 +6,7 @@ import { addDays, formatDate, formatTime, isDateString, localParts, todayString,
 import { appointmentStatusLabel, appointmentStatusLabels, optionsOf } from "@/lib/labels";
 import { appointmentTone } from "@/lib/status";
 import { Badge, EmptyState, PageHeader, param } from "@/components/ui/primitives";
+import { FiltersToggle } from "@/components/filters-toggle";
 
 export const metadata = { title: "Atendimento" };
 
@@ -90,8 +91,9 @@ export default async function AttendancePage({
         }
       />
 
+      <FiltersToggle>
       <div className="card mb-4 p-4">
-        <form action="/atendimento" method="get" className="flex flex-wrap items-end gap-3">
+        <form action="/atendimento" method="get" className="filter-form flex flex-wrap items-end gap-3">
           <div>
             <label className="label" htmlFor="a-from">De</label>
             <input id="a-from" type="date" name="from" defaultValue={from} className="input" />
@@ -124,6 +126,7 @@ export default async function AttendancePage({
           </div>
         </form>
       </div>
+      </FiltersToggle>
 
       {items.length === 0 ? (
         <EmptyState title="Nenhum atendimento neste período" description="Troque as datas ou a situação para ver outros atendimentos." />

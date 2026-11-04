@@ -9,6 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { ReadOnlyProvider } from "@/components/ui/form-kit";
+import { MobileTables } from "@/components/mobile-tables";
 import { moduleForPath, type Access, type Level, type ModuleKey } from "@/lib/modules";
 
 type NavItem = { href: string; label: string; access?: Access };
@@ -219,6 +220,7 @@ export function AppShell({ children, footer, access }: { children: ReactNode; fo
           <ReadOnlyProvider readOnly={readOnly}>{children}</ReadOnlyProvider>
         </div>
       </main>
+      <MobileTables />
     </div>
   );
 }

@@ -118,6 +118,71 @@
     @apply bg-brand-50/50;
   }
 
+  /* Celular: cada linha da tabela vira um cartão (os rótulos vêm do <MobileTables />, em data-label). */
+  @media (max-width: 767px) {
+    .table-wrap:has(> .table[data-cards]) {
+      overflow: visible;
+      border: 0;
+      background: transparent;
+    }
+    .table[data-cards],
+    .table[data-cards] tbody,
+    .table[data-cards] tfoot {
+      display: block;
+    }
+    .table[data-cards] thead {
+      display: none;
+    }
+    .table[data-cards] tbody tr,
+    .table[data-cards] tfoot tr {
+      display: block;
+      margin-bottom: 0.75rem;
+      padding: 0.25rem 0;
+      border: 1px solid var(--color-line);
+      border-radius: 0.75rem;
+      background: var(--color-surface);
+    }
+    .table[data-cards] tbody tr:last-child {
+      border-bottom-width: 1px;
+    }
+    /* rótulo na coluna da esquerda, valor na da direita (o valor pode ter vários elementos, ex.: nome + detalhe) */
+    .table[data-cards] td {
+      display: block;
+      position: relative;
+      min-height: 2.25rem;
+      padding: 0.45rem 1rem 0.45rem 42%;
+      text-align: left !important;
+    }
+    .table[data-cards] td::before {
+      content: attr(data-label);
+      position: absolute;
+      top: 0.55rem;
+      left: 1rem;
+      width: calc(42% - 1.25rem);
+      font-size: 0.75rem;
+      font-weight: 500;
+      line-height: 1.2;
+      color: var(--color-muted);
+    }
+    .table[data-cards] td[data-label=""] {
+      padding-left: 1rem;
+      text-align: right !important;
+    }
+    .table[data-cards] td[data-label=""]::before {
+      display: none;
+    }
+  }
+
+  /* Celular: os campos de filtro ocupam a largura toda (dois lado a lado quando cabem) */
+  @media (max-width: 767px) {
+    .filter-form > div {
+      flex: 1 1 10rem;
+    }
+    .filter-form > .btn {
+      flex: 1 1 auto;
+    }
+  }
+
   .badge {
     @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
   }

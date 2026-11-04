@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import clsx from "clsx";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import type { Prisma } from "@/generated/prisma/client";
@@ -11,6 +12,7 @@ import { appointmentStatusLabel, appointmentStatusLabels } from "@/lib/labels";
 import { appointmentColors } from "@/lib/status";
 import { LinkButton, PageHeader, param } from "@/components/ui/primitives";
 import { AgendaItem, type AgendaItemInfo } from "@/components/agenda-item";
+import { FiltersToggle } from "@/components/filters-toggle";
 import { getAccess } from "@/lib/auth";
 import { levelOf } from "@/lib/access";
 import { ownProfessionalId } from "@/lib/scope";
@@ -41,7 +43,9 @@ export default async function AgendaPage({
 }) {
   const sp = await searchParams;
   const today = todayString();
-  const view = (["day", "week", "month"] as const).find((v) => v === param(sp.view)) ?? "week";
+  // no celular a agenda abre na visão do dia (a semana não cabe na tela)
+  const onPhone = /Android|iPhone|iPod|Mobile/i.test((await headers()).get("user-agent") ?? "");
+  const view = (["day", "week", "month"] as const).find((v) => v === param(sp.view)) ?? (onPhone ? "day" : "week");
   const date = isDateString(param(sp.date)) ? param(sp.date)! : today;
   const specialtyId = param(sp.specialtyId) ?? "";
   // paciente/profissional: busca por nome (ou, vindo de um link, pelo id)
@@ -204,7 +208,8 @@ export default async function AgendaPage({
           </div>
         </div>
 
-        <form action="/agenda" method="get" className="flex flex-wrap items-end gap-3">
+        <FiltersToggle>
+        <form action="/agenda" method="get" className="filter-form flex flex-wrap items-end gap-3">
           <input type="hidden" name="view" value={view} />
           {!own && (
             <>
@@ -244,6 +249,7 @@ export default async function AgendaPage({
           <button type="submit" className="btn btn-primary">Aplicar</button>
           <Link href={`/agenda?view=${view}`} className="btn btn-ghost">Limpar</Link>
         </form>
+        </FiltersToggle>
 
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
           {(Object.keys(appointmentColors) as (keyof typeof appointmentColors)[])
