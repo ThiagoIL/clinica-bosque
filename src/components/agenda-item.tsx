@@ -5,7 +5,8 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import type { AppointmentStatus, CancelParty } from "@/generated/prisma/enums";
 import { appointmentStatusLabel } from "@/lib/labels";
-import { isTouchPhone, whatsappLink } from "@/lib/whatsapp";
+import { DEFAULT_TEMPLATE_BODY, isTouchPhone, renderTemplate, whatsappLink, type MessageVars } from "@/lib/whatsapp";
+import { useWhatsappTemplates } from "@/components/whatsapp-templates";
 import { appointmentTone } from "@/lib/status";
 import { Badge, LinkButton } from "@/components/ui/primitives";
 import { AppointmentActions } from "@/components/appointment-actions";
@@ -28,8 +29,8 @@ export type AgendaItemInfo = {
   statusBy: string | null;
   /** O usuário é o profissional do atendimento (ou administrador): pode abrir a tela de atendimento. */
   canAttend: boolean;
-  /** Número e mensagem da consulta para o WhatsApp; null quando o paciente não tem telefone cadastrado. */
-  whatsapp: { number: string; text: string } | null;
+  /** Número do paciente e valores das variáveis da mensagem; null quando ele não tem telefone cadastrado. */
+  whatsapp: { number: string; vars: MessageVars } | null;
 };
 
 /** Logo simplificada do WhatsApp (balão com telefone). */
@@ -44,6 +45,60 @@ function WhatsappIcon({ className }: { className?: string }) {
         />
       </g>
     </svg>
+  );
+}
+
+/**
+ * Rodapé do card: escolha do modelo de mensagem (Cadastros > Mensagens do WhatsApp) e o botão que abre a conversa
+ * com o paciente. Celular: abre o aplicativo; computador: WhatsApp Web numa aba nomeada, reaproveitada nos envios seguintes.
+ */
+function WhatsappSend({ whatsapp, phone }: { whatsapp: AgendaItemInfo["whatsapp"]; phone: boolean }) {
+  const { templates, defaultId } = useWhatsappTemplates();
+  const [chosen, setChosen] = useState<string | null>(null);
+  const current = templates.find((t) => t.id === (chosen ?? defaultId)) ?? templates[0] ?? null;
+
+  return (
+    <div className="mt-3 flex items-center gap-2 border-t border-line pt-3">
+      {whatsapp ? (
+        <>
+          {templates.length > 1 ? (
+            <select
+              value={current?.id ?? ""}
+              onChange={(e) => setChosen(e.target.value)}
+              aria-label="Modelo da mensagem"
+              title="Modelo da mensagem"
+              className="input min-w-0 flex-1 py-1.5 text-sm"
+            >
+              {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+          ) : (
+            <span className="flex-1 text-right text-xs text-muted">{current?.name ?? "Enviar a consulta ao paciente"}</span>
+          )}
+          <a
+            href={whatsappLink(whatsapp.number, renderTemplate(current?.body ?? DEFAULT_TEMPLATE_BODY, whatsapp.vars), phone)}
+            target={phone ? undefined : "whatsapp-clinica"}
+            rel="noopener"
+            title={phone ? "Enviar pelo WhatsApp" : "Enviar pelo WhatsApp Web"}
+            aria-label="Enviar a mensagem ao paciente pelo WhatsApp"
+            className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white shadow-sm hover:bg-[#1fb857]"
+          >
+            <WhatsappIcon className="size-6" />
+          </a>
+        </>
+      ) : (
+        <>
+          <span className="flex-1 text-right text-xs text-muted">Paciente sem telefone cadastrado</span>
+          <span
+            title="Cadastre um telefone no paciente para enviar pelo WhatsApp"
+            role="img"
+            aria-label="Paciente sem telefone cadastrado"
+            className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-black/5 text-muted/60"
+          >
+            <WhatsappIcon className="size-6" />
+          </span>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -148,38 +203,7 @@ export function AgendaItem({
                 <AppointmentActions appointment={{ id: info.id, status: info.status, startsAt: info.startsAt }} />
               </div>
 
-              {info.status !== "CANCELED" && (
-                <div className="mt-3 flex items-center justify-end gap-2 border-t border-line pt-3">
-                  {info.whatsapp ? (
-                    <>
-                      <span className="text-xs text-muted">Enviar a consulta ao paciente</span>
-                      {/* celular: abre o aplicativo; computador: WhatsApp Web numa aba nomeada, reaproveitada nos envios seguintes */}
-                      <a
-                        href={whatsappLink(info.whatsapp.number, info.whatsapp.text, phone)}
-                        target={phone ? undefined : "whatsapp-clinica"}
-                        rel="noopener"
-                        title={phone ? "Enviar a consulta ao paciente pelo WhatsApp" : "Enviar a consulta ao paciente pelo WhatsApp Web"}
-                        aria-label="Enviar a consulta ao paciente pelo WhatsApp"
-                        className="inline-flex size-11 items-center justify-center rounded-full bg-[#25D366] text-white shadow-sm hover:bg-[#1fb857]"
-                      >
-                        <WhatsappIcon className="size-6" />
-                      </a>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-xs text-muted">Paciente sem telefone cadastrado</span>
-                      <span
-                        title="Cadastre um telefone no paciente para enviar pelo WhatsApp"
-                        role="img"
-                        aria-label="Paciente sem telefone cadastrado"
-                        className="inline-flex size-11 items-center justify-center rounded-full bg-black/5 text-muted/60"
-                      >
-                        <WhatsappIcon className="size-6" />
-                      </span>
-                    </>
-                  )}
-                </div>
-              )}
+              <WhatsappSend whatsapp={info.whatsapp} phone={phone} />
             </div>
           </div>,
           document.body,

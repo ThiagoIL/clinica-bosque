@@ -16,7 +16,8 @@ import { FiltersToggle } from "@/components/filters-toggle";
 import { getAccess } from "@/lib/auth";
 import { levelOf } from "@/lib/access";
 import { ownProfessionalId } from "@/lib/scope";
-import { appointmentMessage, whatsappNumber } from "@/lib/whatsapp";
+import { appointmentVars, whatsappNumber } from "@/lib/whatsapp";
+import { WhatsappTemplatesProvider } from "@/components/whatsapp-templates";
 
 export const metadata = { title: "Agenda" };
 
@@ -84,7 +85,7 @@ export default async function AgendaPage({
   const rangeStart = zoned(days[0], "00:00");
   const rangeEnd = zoned(addDays(days[days.length - 1], 1), "00:00");
 
-  const [items, professionals, specialties, patients] = await Promise.all([
+  const [items, professionals, specialties, patients, templates] = await Promise.all([
     db.appointment.findMany({
       where: {
         startsAt: { gte: rangeStart, lt: rangeEnd },
@@ -117,7 +118,17 @@ export default async function AgendaPage({
     }),
     db.specialty.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
     db.patient.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    // modelos de mensagem do WhatsApp: o padrão primeiro, depois por nome
+    db.messageTemplate.findMany({
+      where: { active: true },
+      orderBy: [{ isDefault: "desc" }, { name: "asc" }],
+      select: { id: true, name: true, body: true, isDefault: true },
+    }),
   ]);
+  const whatsappTemplates = {
+    templates: templates.map(({ id, name, body }) => ({ id, name, body })),
+    defaultId: templates[0]?.id ?? null,
+  };
 
   // ids exatos para pré-preencher "Novo lançamento" quando o nome digitado é de um cadastro
   const same = (a: string, b: string) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }) === 0;
@@ -132,7 +143,7 @@ export default async function AgendaPage({
     const whatsapp = number
       ? {
           number,
-          text: appointmentMessage({
+          vars: appointmentVars({
             patientName: a.patient.name,
             professionalName: a.professional.name,
             serviceName: a.service?.name ?? "Atendimento",
@@ -187,7 +198,7 @@ export default async function AgendaPage({
         : `${formatDate(days[0])} a ${formatDate(days[6])}`;
 
   return (
-    <>
+    <WhatsappTemplatesProvider value={whatsappTemplates}>
       <PageHeader
         title="Agenda"
         description={own ? "Seus atendimentos. A agenda dos demais profissionais não aparece para o seu usuário." : undefined}
@@ -297,7 +308,7 @@ export default async function AgendaPage({
           Nenhum atendimento em {view === "month" ? monthName(date) : "este período"} com os filtros atuais.
         </p>
       )}
-    </>
+    </WhatsappTemplatesProvider>
   );
 }
 

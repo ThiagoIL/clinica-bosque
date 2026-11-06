@@ -6,7 +6,7 @@ export const MODULES = [
   { key: "PACIENTES", label: "Pacientes", description: "Cadastro completo dos pacientes.", paths: ["/pacientes"] },
   { key: "PROFISSIONAIS", label: "Profissionais", description: "Cadastro dos médicos e terapeutas.", paths: ["/profissionais"] },
   { key: "FINANCEIRO", label: "Financeiro", description: "Contas a receber, contas a pagar, extrato, fluxo de caixa, contas e categorias.", paths: ["/financeiro"] },
-  { key: "CADASTROS", label: "Cadastros", description: "Serviços, especialidades, planos de saúde e tabela de preços.", paths: ["/servicos", "/especialidades", "/planos", "/precos"] },
+  { key: "CADASTROS", label: "Cadastros", description: "Serviços, especialidades, planos de saúde, tabela de preços e modelos de mensagem do WhatsApp.", paths: ["/servicos", "/especialidades", "/planos", "/precos", "/mensagens"] },
   { key: "CONTRATOS", label: "Contratos", description: "Gestão dos contratos com profissionais e fornecedores (ativos, a vencer e encerrados), com anexos.", paths: ["/contratos"] },
   { key: "ESTOQUE", label: "Estoque", description: "Itens, saldo, entradas, saídas e ajustes de estoque.", paths: ["/estoque"] },
 ] as const;

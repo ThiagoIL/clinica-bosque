@@ -193,11 +193,11 @@ function spanClass(span?: Span) {
   );
 }
 
-function useFieldError(name: string) {
+export function useFieldError(name: string) {
   return useContext(FormCtx).state.fieldErrors?.[name];
 }
 
-function useReadOnly() {
+export function useReadOnly() {
   return useContext(FormCtx).readOnly;
 }
 

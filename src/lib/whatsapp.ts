@@ -24,6 +24,55 @@ export function titleCaseName(name: string): string {
     .join(" ");
 }
 
+// ── modelos de mensagem ──
+
+export const CLINIC_NAME = "Clínica Bosque";
+
+/** Variáveis que os modelos podem usar, escritas entre chaves: {primeiro_nome}. `sample` alimenta a prévia. */
+export const TEMPLATE_VARIABLES = [
+  { key: "primeiro_nome", label: "Primeiro nome do paciente", sample: "Ana" },
+  { key: "paciente", label: "Nome completo do paciente", sample: "Ana Beatriz Lima" },
+  { key: "data", label: "Data da consulta", sample: "04/11/2026" },
+  { key: "dia_semana", label: "Dia da semana", sample: "quarta-feira" },
+  { key: "horario", label: "Horário de início", sample: "15:00" },
+  { key: "profissional", label: "Nome do profissional", sample: "Dra. Helena Duarte" },
+  { key: "servico", label: "Serviço / tipo de atendimento", sample: "Consulta médica" },
+  { key: "clinica", label: "Nome da clínica", sample: CLINIC_NAME },
+] as const;
+
+export type TemplateVariable = (typeof TEMPLATE_VARIABLES)[number]["key"];
+export type MessageVars = Record<TemplateVariable, string>;
+
+/** Valores de exemplo, para a prévia na tela de edição do modelo. */
+export const SAMPLE_VARS = Object.fromEntries(TEMPLATE_VARIABLES.map((v) => [v.key, v.sample])) as MessageVars;
+
+const KNOWN = new Set<string>(TEMPLATE_VARIABLES.map((v) => v.key));
+
+/** Troca {variavel} pelo valor; o que não for uma variável conhecida fica como foi escrito. */
+export function renderTemplate(body: string, vars: MessageVars): string {
+  return body.replace(/\{(\w+)\}/g, (whole, key: string) => (KNOWN.has(key) ? vars[key as TemplateVariable] : whole));
+}
+
+/** Variáveis escritas no texto que não existem (provável erro de digitação), sem repetição. */
+export function unknownVariables(body: string): string[] {
+  const found = new Set<string>();
+  for (const [, key] of body.matchAll(/\{([^{}\n]*)\}/g)) if (!KNOWN.has(key)) found.add(key);
+  return [...found];
+}
+
+/** Modelo usado quando a clínica ainda não cadastrou nenhum (igual ao "Lembrete de consulta" que já vem pronto). */
+export const DEFAULT_TEMPLATE_BODY = [
+  "Olá, {primeiro_nome}! Aqui é da {clinica}.",
+  "",
+  "Passando para lembrar da sua consulta:",
+  "📅 Data: {dia_semana}, {data}",
+  "🕒 Horário: {horario}",
+  "🩺 Atendimento: {servico}",
+  "👨‍⚕️ Profissional: {profissional}",
+  "",
+  "Por favor, confirme sua presença respondendo esta mensagem. Se não puder comparecer, avise com antecedência para reagendarmos.",
+].join("\n");
+
 export type AppointmentMessage = {
   patientName: string;
   professionalName: string;
@@ -36,20 +85,18 @@ export type AppointmentMessage = {
   time: string;
 };
 
-/** Texto da mensagem de lembrete/confirmação da consulta. */
-export function appointmentMessage(a: AppointmentMessage): string {
-  const first = titleCaseName(a.patientName).split(" ")[0];
-  return [
-    `Olá, ${first}! Aqui é da Clínica Bosque.`,
-    "",
-    "Passando para lembrar da sua consulta:",
-    `📅 Data: ${a.weekday}, ${a.date}`,
-    `🕒 Horário: ${a.time}`,
-    `🩺 Atendimento: ${a.serviceName}`,
-    `👨‍⚕️ Profissional: ${titleCaseName(a.professionalName)}`,
-    "",
-    "Por favor, confirme sua presença respondendo esta mensagem. Se não puder comparecer, avise com antecedência para reagendarmos.",
-  ].join("\n");
+/** Valores das variáveis para um atendimento. */
+export function appointmentVars(a: AppointmentMessage): MessageVars {
+  return {
+    primeiro_nome: titleCaseName(a.patientName).split(" ")[0],
+    paciente: titleCaseName(a.patientName),
+    data: a.date,
+    dia_semana: a.weekday,
+    horario: a.time,
+    profissional: titleCaseName(a.professionalName),
+    servico: a.serviceName,
+    clinica: CLINIC_NAME,
+  };
 }
 
 /**

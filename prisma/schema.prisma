@@ -329,6 +329,18 @@ model Specialty {
   professionals Professional[]
 }
 
+/// Modelo de mensagem do WhatsApp (lembrete de consulta, reagendamento…). O texto usa variáveis como {primeiro_nome}.
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  body      String
+  /// Modelo sugerido ao enviar pela agenda (só um).
+  isDefault Boolean  @default(false)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Professional {
   id             String    @id @default(cuid())
   name           String

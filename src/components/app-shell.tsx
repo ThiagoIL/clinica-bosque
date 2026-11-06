@@ -60,6 +60,7 @@ const NAV: NavGroup[] = [
       { href: "/especialidades", label: "Especialidades", access: "CADASTROS" },
       { href: "/planos", label: "Planos de saúde", access: "CADASTROS" },
       { href: "/precos", label: "Tabela de preços", access: "CADASTROS" },
+      { href: "/mensagens", label: "Mensagens do WhatsApp", access: "CADASTROS" },
     ],
   },
   {
