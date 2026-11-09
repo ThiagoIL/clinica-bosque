@@ -24,11 +24,13 @@ export default function ImportPatientsPage() {
           </ol>
           <p className="mb-5 rounded-lg bg-canvas px-3 py-2 text-xs text-muted">
             Os nomes são padronizados: tudo em minúsculas e a primeira letra de cada nome em maiúscula (“MARIA DA SILVA” vira “Maria da Silva”).
-            Pacientes com CPF já cadastrado, ou com o mesmo nome e data de nascimento, são ignorados. Máximo de {MAX_IMPORT_ROWS} pacientes por arquivo.
+            Pacientes com CPF já cadastrado, ou com o mesmo nome e data de nascimento, são ignorados. Células com “-” contam como vazias, e um dado
+            inválido (CPF, e-mail, data…) é ignorado sem perder o paciente. Funciona também com a planilha exportada de outro sistema: as colunas são
+            reconhecidas pelo título. Máximo de {MAX_IMPORT_ROWS.toLocaleString("pt-BR")} pacientes por arquivo.
           </p>
 
           <ActionForm action={importPatients}>
-            <FileField name="file" label="Planilha do Excel" accept=".xlsx" required />
+            <FileField name="file" label="Planilha do Excel (.xlsx)" accept=".xlsx,.xls" required />
             <FormActions>
               <SubmitButton name="mode" value="check" variant="outline">Conferir</SubmitButton>
               <SubmitButton name="mode" value="import">Importar</SubmitButton>

@@ -10,6 +10,10 @@ export function whatsappNumber(phone: string | null | undefined): string | null 
   let digits = onlyDigits(phone ?? "");
   digits = digits.replace(/^0+/, ""); // zero de discagem à esquerda
   if (digits.length === 10 || digits.length === 11) digits = `55${digits}`;
+  // celular antigo de 8 dígitos (começa com 6-9, ex.: (84) 9984-5276): o WhatsApp usa o 9 na frente
+  if (digits.length === 12 && digits.startsWith("55") && /^[6-9]/.test(digits.slice(4))) {
+    digits = `${digits.slice(0, 4)}9${digits.slice(4)}`;
+  }
   return digits.length >= 12 && digits.length <= 15 ? digits : null;
 }
 
