@@ -9,6 +9,8 @@ const securityHeaders = [
 const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
+  // leitura/geração de planilhas (importação de pacientes): roda direto no Node, sem passar pelo bundler
+  serverExternalPackages: ["exceljs"],
   experimental: {
     // anexos de contratos (até 10 MB por envio, com folga para o multipart)
     serverActions: { bodySizeLimit: "12mb" },

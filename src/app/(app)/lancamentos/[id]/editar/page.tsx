@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { centsToInput, formatMoney } from "@/lib/money";
 import { formatDateTime } from "@/lib/dates";
 import { WEEKDAY_OPTIONS, attendanceKindLabels, billingModeLabels, optionsOf, recurrenceLabels } from "@/lib/labels";
-import { ActionForm, DeleteButton, FormActions, FormGrid, SelectField, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
+import { ActionForm, CheckboxField, DeleteButton, FormActions, FormGrid, SelectField, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
 import { Card, LinkButton, PageHeader } from "@/components/ui/primitives";
 import { requireUser } from "@/lib/auth";
 import { ownProfessionalId } from "@/lib/scope";
@@ -67,6 +67,7 @@ export default async function EditEngagementPage({ params }: { params: Promise<{
                 name="kind" label="Tipo do atendimento" required allowEmpty={false} defaultValue={e.kind}
                 options={optionsOf(attendanceKindLabels)}
               />
+              <CheckboxField name="aba" label="Paciente ABA" defaultChecked={e.aba} hint="Aparece com um cérebro na agenda e no filtro ABA" />
               {perSession ? (
                 <>
                   <TextField

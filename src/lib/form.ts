@@ -9,6 +9,8 @@ export type FormState = {
   error?: string;
   success?: string;
   fieldErrors?: Record<string, string>;
+  /** Lista de detalhes exibida abaixo da mensagem (ex.: linhas com problema na importação de planilha). */
+  details?: string[];
   /** Valores enviados, devolvidos para repreencher o formulário após um erro. */
   values?: Record<string, string>;
 };

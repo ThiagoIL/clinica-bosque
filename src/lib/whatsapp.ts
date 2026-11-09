@@ -1,4 +1,5 @@
 import { onlyDigits } from "@/lib/cpf";
+import { titleCaseName } from "@/lib/names";
 
 /**
  * Número no formato do WhatsApp (só dígitos, com o código do país). Telefones brasileiros cadastrados
@@ -12,17 +13,8 @@ export function whatsappNumber(phone: string | null | undefined): string | null 
   return digits.length >= 12 && digits.length <= 15 ? digits : null;
 }
 
-const SMALL_WORDS = new Set(["da", "de", "do", "das", "dos", "e"]);
-
-/** "ALEXANDRE WAGNER DA SILVA" → "Alexandre Wagner da Silva" (nomes digitados em caixa alta ficam legíveis na mensagem). */
-export function titleCaseName(name: string): string {
-  return name
-    .trim()
-    .toLowerCase()
-    .split(/\s+/)
-    .map((w, i) => (i > 0 && SMALL_WORDS.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)))
-    .join(" ");
-}
+// nomes digitados em caixa alta ficam legíveis na mensagem
+export { titleCaseName };
 
 // ── modelos de mensagem ──
 

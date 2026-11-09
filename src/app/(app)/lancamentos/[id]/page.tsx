@@ -7,6 +7,7 @@ import { WEEKDAY_OPTIONS, appointmentStatusLabel, attendanceKindLabels, billingM
 import { appointmentTone, engagementTone, entryDisplayStatus } from "@/lib/status";
 import { ActionForm, ConfirmSubmit } from "@/components/ui/form-kit";
 import { Badge, Card, LinkButton, PageHeader } from "@/components/ui/primitives";
+import { AbaBadge } from "@/components/aba-badge";
 import { AppointmentActions } from "@/components/appointment-actions";
 import { cancelEngagement, deleteEngagement } from "../actions";
 import { getAccess } from "@/lib/auth";
@@ -47,6 +48,7 @@ export default async function EngagementPage({ params }: { params: Promise<{ id:
         back={{ href: "/lancamentos", label: "Lançamentos" }}
         actions={
           <>
+            {engagement.aba && <AbaBadge />}
             <Badge tone={engagementTone(engagement.status)}>{engagementStatusLabels[engagement.status]}</Badge>
             {engagement.status !== "CANCELED" && (
               <LinkButton href={`/lancamentos/${engagement.id}/editar`} variant="outline">Editar</LinkButton>

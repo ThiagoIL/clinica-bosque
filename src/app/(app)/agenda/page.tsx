@@ -18,6 +18,7 @@ import { levelOf } from "@/lib/access";
 import { ownProfessionalId } from "@/lib/scope";
 import { appointmentVars, whatsappNumber } from "@/lib/whatsapp";
 import { WhatsappTemplatesProvider } from "@/components/whatsapp-templates";
+import { AbaIcon } from "@/components/aba-badge";
 
 export const metadata = { title: "Agenda" };
 
@@ -29,7 +30,7 @@ type Item = Prisma.AppointmentGetPayload<{
     patient: { select: { id: true; name: true; phone: true; phone2: true; guardianPhone: true } };
     professional: { select: { name: true } };
     service: { select: { name: true } };
-    engagement: { select: { id: true; number: true } };
+    engagement: { select: { id: true; number: true; aba: true } };
     evolution: { select: { id: true } };
     statusChangedBy: { select: { name: true } };
   };
@@ -66,6 +67,9 @@ export default async function AgendaPage({
     professionalQ = (await db.professional.findUnique({ where: { id: professionalIdParam }, select: { name: true } }))?.name ?? "";
   }
   const showCanceled = param(sp.canceled) === "1";
+  // filtro ABA: "1" só pacientes ABA, "0" só os que não são
+  const abaParam = param(sp.aba) === "1" ? "1" : param(sp.aba) === "0" ? "0" : "";
+  const aba = abaParam === "1" ? true : abaParam === "0" ? false : undefined;
   const selectedId = param(sp.a);
   const canLaunch = levelOf(access, "LANCAMENTOS") === "EDIT";
   const me = access.user
@@ -99,6 +103,8 @@ export default async function AgendaPage({
             }
           : {}),
         ...(patientQ ? { patient: { name: { contains: patientQ, mode: "insensitive" as const } } } : {}),
+        // ABA: atendimentos sem lançamento contam como "não ABA"
+        ...(aba === true ? { engagement: { aba: true } } : aba === false ? { OR: [{ engagementId: null }, { engagement: { aba: false } }] } : {}),
         ...(showCanceled ? {} : { status: { not: "CANCELED" } }),
       },
       orderBy: { startsAt: "asc" },
@@ -106,7 +112,7 @@ export default async function AgendaPage({
         patient: { select: { id: true, name: true, phone: true, phone2: true, guardianPhone: true } },
         professional: { select: { name: true } },
         service: { select: { name: true } },
-        engagement: { select: { id: true, number: true } },
+        engagement: { select: { id: true, number: true, aba: true } },
         evolution: { select: { id: true } },
         statusChangedBy: { select: { name: true } },
       },
@@ -163,7 +169,8 @@ export default async function AgendaPage({
     status: a.status,
     canceledBy: a.canceledBy,
     startsAt: a.startsAt,
-    engagement: a.engagement,
+    engagement: a.engagement ? { id: a.engagement.id, number: a.engagement.number } : null,
+    aba: !!a.engagement?.aba,
     hasEvolution: !!a.evolution,
     statusBy: a.statusChangedBy ? `${a.statusChangedBy.name}${a.statusChangedAt ? ` em ${formatDateTime(a.statusChangedAt)}` : ""}` : null,
     canAttend: !!me && (me.role === "ADMIN" || me.professionalId === a.professionalId),
@@ -181,7 +188,7 @@ export default async function AgendaPage({
   const build = (over: Record<string, string | undefined>) => {
     const q = new URLSearchParams();
     const merged: Record<string, string | undefined> = {
-      view, date, specialtyId, professional: professionalQ, patient: patientQ, canceled: showCanceled ? "1" : undefined, ...over,
+      view, date, specialtyId, professional: professionalQ, patient: patientQ, aba: abaParam, canceled: showCanceled ? "1" : undefined, ...over,
     };
     for (const [k, v] of Object.entries(merged)) if (v) q.set(k, v);
     return `/agenda?${q.toString()}`;
@@ -273,6 +280,14 @@ export default async function AgendaPage({
             <label className="label" htmlFor="f-date">Ir para a data</label>
             <input id="f-date" type="date" name="date" defaultValue={date} className="input" />
           </div>
+          <div className="min-w-36">
+            <label className="label" htmlFor="f-aba">Paciente ABA</label>
+            <select id="f-aba" name="aba" defaultValue={abaParam} className="input">
+              <option value="">Todos</option>
+              <option value="1">Somente ABA</option>
+              <option value="0">Não ABA</option>
+            </select>
+          </div>
           <label className="flex items-center gap-2 pb-2 text-sm">
             <input type="checkbox" name="canceled" value="1" defaultChecked={showCanceled} className="size-4 accent-brand-600" />
             Mostrar cancelados
@@ -357,6 +372,7 @@ function MonthGrid({
                     >
                       <span className="size-1.5 shrink-0 rounded-full" style={{ background: appointmentColors[a.status] }} />
                       <span className="tabular-nums text-muted">{formatTime(a.startsAt)}</span>
+                      {a.engagement?.aba && <AbaIcon className="size-3 shrink-0 text-violet-700" />}
                       <span className="truncate">{a.patient.name}</span>
                     </AgendaItem>
                   </li>
@@ -505,8 +521,9 @@ function TimeGrid({
                       }}
                       title={`${a.patient.name} — ${a.professional.name} (${appointmentStatusLabel(a.status, a.canceledBy)})`}
                     >
-                      <span className="block truncate font-semibold">
-                        {formatTime(a.startsAt)} {a.patient.name}
+                      <span className="flex items-center gap-1 font-semibold">
+                        {a.engagement?.aba && <AbaIcon className="size-3.5 shrink-0 text-violet-700" />}
+                        <span className="truncate">{formatTime(a.startsAt)} {a.patient.name}</span>
                       </span>
                       <span className="block truncate text-muted">
                         {a.service?.name ?? "Atendimento"} · {a.professional.name}

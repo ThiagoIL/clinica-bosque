@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import clsx from "clsx";
-import { ActionForm, FormActions, FormGrid, SelectField, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
+import { ActionForm, CheckboxField, FormActions, FormGrid, SelectField, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
 import { LinkButton } from "@/components/ui/primitives";
 import {
   MAX_OCCURRENCES, endOfMonth, formatDate, occurrenceDates, weekdayName, type RecurrenceKind,
@@ -126,6 +126,7 @@ export function EngagementForm({ patients, professionals, services, plans, defau
             name="serviceId" label="Serviço" required value={serviceId} onChange={onServiceChange} span={2}
             options={services.map((s) => ({ value: s.id, label: s.name }))}
           />
+          <CheckboxField name="aba" label="Paciente ABA" hint="Aparece com um cérebro na agenda e no filtro ABA" />
         </FormGrid>
         {kind === "RETURN" && (
           <p className="mt-3 rounded-lg bg-accent-50 px-3 py-2 text-xs text-accent-700">

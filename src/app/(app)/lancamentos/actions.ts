@@ -10,7 +10,7 @@ import {
 import { splitCents } from "@/lib/money";
 import { describeConflicts, findConflicts } from "@/lib/scheduling";
 import {
-  UserError, dateField, integer, money, optional, optionalDate, optionalMoney, parseForm,
+  UserError, checkbox, dateField, integer, money, optional, optionalDate, optionalMoney, parseForm,
   requiredEnum, selectId, timeField, type FormState,
 } from "@/lib/form";
 
@@ -19,6 +19,7 @@ const createSchema = z.object({
   professionalId: selectId("o profissional"),
   serviceId: selectId("o serviço"),
   kind: requiredEnum(["CONSULTATION", "RETURN", "SESSION"], "Tipo do atendimento"),
+  aba: checkbox(),
   unitPrice: money("Valor unitário", { allowZero: true }),
   discount: optionalMoney(),
   recurrence: requiredEnum(["NONE", "DAILY", "WEEKLY", "BIWEEKLY", "MONTHLY"], "Repetição"),
@@ -124,6 +125,7 @@ export async function createEngagement(_: FormState, formData: FormData): Promis
           serviceId: service.id,
           healthPlanId: patient.healthPlanId,
           kind: d.kind,
+          aba: d.aba,
           quantity,
           unitPriceCents: d.unitPrice,
           discountCents: discount,
@@ -216,6 +218,7 @@ const updateSchema = z.object({
   professionalId: selectId("o profissional"),
   serviceId: selectId("o serviço"),
   kind: requiredEnum(["CONSULTATION", "RETURN", "SESSION"], "Tipo do atendimento"),
+  aba: checkbox(),
   unitPrice: optionalMoney(),
   discount: optionalMoney(),
   notes: optional(1000),
@@ -302,7 +305,7 @@ export async function updateEngagement(_: FormState, formData: FormData): Promis
 
       await tx.engagement.update({
         where: { id: e.id },
-        data: { professionalId: professional.id, serviceId: service.id, kind: d.kind, notes: d.notes, ...priceData },
+        data: { professionalId: professional.id, serviceId: service.id, kind: d.kind, aba: d.aba, notes: d.notes, ...priceData },
       });
     });
     return { redirectTo: `/lancamentos/${d.id}` };

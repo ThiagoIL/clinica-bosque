@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { FileSpreadsheet, Plus } from "lucide-react";
 import { db } from "@/lib/db";
 import { ageFromBirth } from "@/lib/dates";
 import { formatPhone } from "@/lib/cpf";
@@ -45,9 +45,14 @@ export default async function PatientsPage({
         title="Pacientes"
         description="Cadastro completo dos pacientes da clínica."
         actions={
-          <LinkButton href="/pacientes/novo">
-            <Plus className="size-4" /> Novo paciente
-          </LinkButton>
+          <>
+            <LinkButton href="/pacientes/importar" variant="outline">
+              <FileSpreadsheet className="size-4" /> Importar planilha
+            </LinkButton>
+            <LinkButton href="/pacientes/novo">
+              <Plus className="size-4" /> Novo paciente
+            </LinkButton>
+          </>
         }
       />
 

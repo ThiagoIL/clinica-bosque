@@ -9,6 +9,7 @@ import { engagementTone } from "@/lib/status";
 import { requireUser } from "@/lib/auth";
 import { ownProfessionalId } from "@/lib/scope";
 import { Badge, EmptyState, FilterBar, FilterField, LinkButton, PageHeader, Pagination, param } from "@/components/ui/primitives";
+import { AbaBadge } from "@/components/aba-badge";
 
 export const metadata = { title: "Lançamentos" };
 const PAGE_SIZE = 20;
@@ -28,6 +29,9 @@ export default async function EngagementsPage({
   let patientQ = param(sp.patient)?.trim() ?? "";
   let professionalQ = own ? "" : (param(sp.professional)?.trim() ?? "");
   const specialtyId = own ? "" : (param(sp.specialtyId) ?? "");
+  // ABA: "1" só pacientes ABA, "0" só os que não são
+  const abaParam = param(sp.aba);
+  const aba = abaParam === "1" ? true : abaParam === "0" ? false : undefined;
   const kindParam = param(sp.kind) ?? "";
   const kind = kindParam in attendanceKindLabels ? (kindParam as keyof typeof attendanceKindLabels) : undefined;
   const from = isDateString(param(sp.from)) ? param(sp.from)! : "";
@@ -48,6 +52,7 @@ export default async function EngagementsPage({
     ...(professionalQ ? { professional: { name: { contains: professionalQ, mode: "insensitive" }, ...(specialtyId ? { specialtyId } : {}) } } : {}),
     ...(specialtyId && !professionalQ ? { professional: { specialtyId } } : {}),
     ...(kind ? { kind } : {}),
+    ...(aba !== undefined ? { aba } : {}),
     // período: lançamentos com algum atendimento entre as datas
     ...(from || to
       ? {
@@ -129,6 +134,13 @@ export default async function EngagementsPage({
             {optionsOf(attendanceKindLabels).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </FilterField>
+        <FilterField label="Paciente ABA">
+          <select name="aba" defaultValue={abaParam === "1" || abaParam === "0" ? abaParam : ""} className="input">
+            <option value="">Todos</option>
+            <option value="1">Somente ABA</option>
+            <option value="0">Não ABA</option>
+          </select>
+        </FilterField>
         <FilterField label="Situação">
           <select name="status" defaultValue={status} className="input">
             <option value="">Todas</option>
@@ -159,6 +171,7 @@ export default async function EngagementsPage({
                     <Link href={`/lancamentos/${e.id}`} className="font-medium text-brand-800 hover:underline">
                       {e.patient.name}
                     </Link>
+                    {e.aba && <span className="ml-2 align-middle"><AbaBadge /></span>}
                   </td>
                   <td>
                     {e.service.name}
@@ -185,7 +198,7 @@ export default async function EngagementsPage({
       )}
       <Pagination
         page={page} pageSize={PAGE_SIZE} total={total} basePath="/lancamentos"
-        params={{ status, patient: patientQ, professional: professionalQ, specialtyId, kind: kind ?? "", from, to }}
+        params={{ status, patient: patientQ, professional: professionalQ, specialtyId, kind: kind ?? "", aba: abaParam === "1" || abaParam === "0" ? abaParam : "", from, to }}
       />
     </>
   );

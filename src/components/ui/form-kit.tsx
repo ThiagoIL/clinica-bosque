@@ -75,6 +75,13 @@ export function ActionForm({
             <span>{state.success}</span>
           </div>
         )}
+        {!hideMessages && state.details && state.details.length > 0 && (
+          <ul className="mb-4 max-h-72 list-disc space-y-0.5 overflow-y-auto rounded-lg border border-line bg-canvas py-2.5 pl-8 pr-3 text-xs text-ink">
+            {state.details.map((line, i) => (
+              <li key={i}>{line}</li>
+            ))}
+          </ul>
+        )}
         {children}
       </form>
     </FormCtx.Provider>

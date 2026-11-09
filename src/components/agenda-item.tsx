@@ -7,6 +7,7 @@ import type { AppointmentStatus, CancelParty } from "@/generated/prisma/enums";
 import { appointmentStatusLabel } from "@/lib/labels";
 import { DEFAULT_TEMPLATE_BODY, isTouchPhone, renderTemplate, whatsappLink, type MessageVars } from "@/lib/whatsapp";
 import { useWhatsappTemplates } from "@/components/whatsapp-templates";
+import { AbaBadge } from "@/components/aba-badge";
 import { appointmentTone } from "@/lib/status";
 import { Badge, LinkButton } from "@/components/ui/primitives";
 import { AppointmentActions } from "@/components/appointment-actions";
@@ -25,6 +26,8 @@ export type AgendaItemInfo = {
   startsAt: Date;
   engagement: { id: string; number: number } | null;
   hasEvolution: boolean;
+  /** Atendimento de lançamento de paciente ABA (mostra o cérebro). */
+  aba: boolean;
   /** Quem informou a situação por último, ex.: "Maria em 28/10/2026 10:05". */
   statusBy: string | null;
   /** O usuário é o profissional do atendimento (ou administrador): pode abrir a tela de atendimento. */
@@ -180,7 +183,8 @@ export function AgendaItem({
                 </button>
               </div>
 
-              <div className="mt-2">
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                {info.aba && <AbaBadge />}
                 <Badge tone={appointmentTone(info.status)}>{appointmentStatusLabel(info.status, info.canceledBy)}</Badge>
                 {info.statusBy && <span className="ml-2 text-xs text-muted">por {info.statusBy}</span>}
               </div>

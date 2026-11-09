@@ -459,6 +459,8 @@ model Engagement {
   installments    Int              @default(1)
   firstDueDate    DateTime?        @db.Date
   status          EngagementStatus @default(ACTIVE)
+  /// Paciente ABA: os atendimentos do lançamento aparecem com um cérebro na agenda e entram no filtro ABA.
+  aba             Boolean          @default(false)
   notes           String?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
