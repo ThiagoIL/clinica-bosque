@@ -4,7 +4,7 @@ import {
   ActionForm, CheckboxField, DeleteButton, FormActions, FormGrid, SubmitButton, TextField,
 } from "@/components/ui/form-kit";
 import { MessageEditor } from "@/components/message-editor";
-import { Badge, Card, EmptyState, LinkButton, PageHeader, param } from "@/components/ui/primitives";
+import { Badge, Card, EmptyState, LinkButton, PageHeader, SearchBar, param } from "@/components/ui/primitives";
 import { DEFAULT_TEMPLATE_BODY } from "@/lib/whatsapp";
 import { deleteMessageTemplate, saveMessageTemplate } from "./actions";
 
@@ -17,9 +17,12 @@ export default async function MessageTemplatesPage({
 }) {
   const sp = await searchParams;
   const editId = param(sp.edit);
+  const q = param(sp.q)?.trim() ?? "";
 
   const [templates, editing] = await Promise.all([
-    db.messageTemplate.findMany({ orderBy: [{ isDefault: "desc" }, { active: "desc" }, { name: "asc" }] }),
+    db.messageTemplate.findMany({
+      where: q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { body: { contains: q, mode: "insensitive" } }] } : undefined,
+      orderBy: [{ isDefault: "desc" }, { active: "desc" }, { name: "asc" }] }),
     editId && editId !== "new" ? db.messageTemplate.findUnique({ where: { id: editId } }) : null,
   ]);
 
@@ -30,6 +33,8 @@ export default async function MessageTemplatesPage({
         description="Modelos de texto usados no botão do WhatsApp da agenda. Padronize os avisos aos pacientes: lembrete, reagendamento, cancelamento…"
         actions={editId === undefined && <LinkButton href="/mensagens?edit=new">Novo modelo</LinkButton>}
       />
+
+      <SearchBar action="/mensagens" q={q} placeholder="Buscar modelo de mensagem…" hidden={editId !== undefined} />
 
       {editId !== undefined && (
         <Card title={editing ? `Editar ${editing.name}` : "Novo modelo"} className="mb-6">

@@ -19,6 +19,7 @@ import { ownProfessionalId } from "@/lib/scope";
 import { appointmentVars, whatsappNumber } from "@/lib/whatsapp";
 import { WhatsappTemplatesProvider } from "@/components/whatsapp-templates";
 import { AbaIcon } from "@/components/aba-badge";
+import { SearchSelect } from "@/components/search-select";
 
 export const metadata = { title: "Agenda" };
 
@@ -30,7 +31,7 @@ type Item = Prisma.AppointmentGetPayload<{
     patient: { select: { id: true; name: true; phone: true; phone2: true; guardianPhone: true } };
     professional: { select: { name: true } };
     service: { select: { name: true } };
-    engagement: { select: { id: true; number: true; aba: true } };
+    engagement: { select: { id: true; number: true; aba: true; status: true; quantity: true } };
     evolution: { select: { id: true } };
     statusChangedBy: { select: { name: true } };
   };
@@ -72,6 +73,7 @@ export default async function AgendaPage({
   const aba = abaParam === "1" ? true : abaParam === "0" ? false : undefined;
   const selectedId = param(sp.a);
   const canLaunch = levelOf(access, "LANCAMENTOS") === "EDIT";
+  const canMoveAny = levelOf(access, "AGENDA") === "EDIT" || canLaunch;
   const me = access.user
     ? await db.user.findUnique({ where: { id: access.user.id }, select: { role: true, professionalId: true } })
     : null;
@@ -112,7 +114,7 @@ export default async function AgendaPage({
         patient: { select: { id: true, name: true, phone: true, phone2: true, guardianPhone: true } },
         professional: { select: { name: true } },
         service: { select: { name: true } },
-        engagement: { select: { id: true, number: true, aba: true } },
+        engagement: { select: { id: true, number: true, aba: true, status: true, quantity: true } },
         evolution: { select: { id: true } },
         statusChangedBy: { select: { name: true } },
       },
@@ -169,8 +171,14 @@ export default async function AgendaPage({
     status: a.status,
     canceledBy: a.canceledBy,
     startsAt: a.startsAt,
-    engagement: a.engagement ? { id: a.engagement.id, number: a.engagement.number } : null,
+    engagement: a.engagement ? { id: a.engagement.id, number: a.engagement.number, canceled: a.engagement.status === "CANCELED" } : null,
+    canEditEngagement: canLaunch && !!a.engagement,
     aba: !!a.engagement?.aba,
+    endsAt: a.endsAt,
+    // arrastar/esticar só vale para atendimentos em aberto e para quem pode alterar a agenda
+    canMove: canMoveAny && (a.status === "SCHEDULED" || a.status === "CONFIRMED"),
+    // faz parte de uma repetição e ainda tem atendimentos depois deste
+    hasFollowing: !!a.engagement && a.engagement.quantity > 1 && (a.sequence ?? 0) < a.engagement.quantity,
     hasEvolution: !!a.evolution,
     statusBy: a.statusChangedBy ? `${a.statusChangedBy.name}${a.statusChangedAt ? ` em ${formatDateTime(a.statusChangedAt)}` : ""}` : null,
     canAttend: !!me && (me.role === "ADMIN" || me.professionalId === a.professionalId),
@@ -253,10 +261,10 @@ export default async function AgendaPage({
             <>
               <div className="min-w-44">
                 <label className="label" htmlFor="f-spec">Especialidade</label>
-                <select id="f-spec" name="specialtyId" defaultValue={specialtyId} className="input">
-                  <option value="">Todas</option>
-                  {specialties.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <SearchSelect
+                  id="f-spec" name="specialtyId" defaultValue={specialtyId} emptyLabel="Todas"
+                  options={specialties.map((s) => ({ value: s.id, label: s.name }))}
+                />
               </div>
               <div className="min-w-48">
                 <label className="label" htmlFor="f-prof">Profissional</label>
@@ -489,7 +497,7 @@ function TimeGrid({
           {days.map((d) => {
             const placed = layoutLanes(byDay.get(d) ?? []);
             return (
-              <div key={d} className={clsx("relative border-l border-line", d === today && "bg-brand-50/40")} style={{ height: gridHeight }}>
+              <div key={d} data-agenda-day={d} className={clsx("relative border-l border-line", d === today && "bg-brand-50/40")} style={{ height: gridHeight }}>
                 {canLaunch && hours.map((h, i) => (
                   <Link
                     key={h}
@@ -507,6 +515,7 @@ function TimeGrid({
                       key={a.id}
                       info={toInfo(a)}
                       defaultOpen={a.id === openId}
+                      drag={{ startHour, endHour, hourHeight: HOUR_HEIGHT }}
                       className={clsx(
                         "absolute overflow-hidden rounded-md border-l-4 px-1.5 py-1 text-left text-[11px] leading-tight shadow-xs transition hover:z-10 hover:shadow-md",
                         a.status === "CANCELED" && "line-through opacity-60",

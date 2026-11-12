@@ -6,6 +6,7 @@ import { addDays, formatDate, formatTime, isDateString, localParts, todayString,
 import { appointmentStatusLabel, appointmentStatusLabels, optionsOf } from "@/lib/labels";
 import { appointmentTone } from "@/lib/status";
 import { Badge, EmptyState, PageHeader, param } from "@/components/ui/primitives";
+import { SearchSelect } from "@/components/search-select";
 import { FiltersToggle } from "@/components/filters-toggle";
 
 export const metadata = { title: "Atendimento" };
@@ -105,10 +106,10 @@ export default async function AttendancePage({
           {isAdmin && (
             <div className="min-w-48">
               <label className="label" htmlFor="a-prof">Profissional</label>
-              <select id="a-prof" name="professionalId" defaultValue={professionalId} className="input">
-                <option value="">Todos</option>
-                {professionals.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
+              <SearchSelect
+                id="a-prof" name="professionalId" defaultValue={professionalId} emptyLabel="Todos"
+                options={professionals.map((p) => ({ value: p.id, label: p.name }))}
+              />
             </div>
           )}
           <div>

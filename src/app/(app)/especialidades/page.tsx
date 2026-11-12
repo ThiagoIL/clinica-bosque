@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import {
   ActionForm, CheckboxField, DeleteButton, FormActions, FormGrid, SubmitButton, TextField,
 } from "@/components/ui/form-kit";
-import { Badge, Card, EmptyState, LinkButton, PageHeader, param } from "@/components/ui/primitives";
+import { Badge, Card, EmptyState, LinkButton, PageHeader, SearchBar, param } from "@/components/ui/primitives";
 import { deleteSpecialty, saveSpecialty } from "./actions";
 
 export const metadata = { title: "Especialidades" };
@@ -15,9 +15,11 @@ export default async function SpecialtiesPage({
 }) {
   const sp = await searchParams;
   const editId = param(sp.edit);
+  const q = param(sp.q)?.trim() ?? "";
 
   const [specialties, editing] = await Promise.all([
     db.specialty.findMany({
+      where: q ? { name: { contains: q, mode: "insensitive" } } : undefined,
       orderBy: [{ active: "desc" }, { name: "asc" }],
       include: { _count: { select: { professionals: true } } },
     }),
@@ -31,6 +33,8 @@ export default async function SpecialtiesPage({
         description="Lista usada no cadastro dos profissionais e nos filtros da agenda e dos lançamentos."
         actions={editId === undefined && <LinkButton href="/especialidades?edit=new">Nova especialidade</LinkButton>}
       />
+
+      <SearchBar action="/especialidades" q={q} placeholder="Buscar especialidade…" hidden={editId !== undefined} />
 
       {editId !== undefined && (
         <Card title={editing ? `Editar ${editing.name}` : "Nova especialidade"} className="mb-6">

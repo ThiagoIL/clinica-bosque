@@ -1,5 +1,6 @@
 import Link from "next/link";
 import clsx from "clsx";
+import { Search } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { FiltersToggle } from "@/components/filters-toggle";
 
@@ -183,6 +184,26 @@ export function FilterBar({ children, action }: { children: ReactNode; action: s
         <Link href={action} className="btn btn-ghost">Limpar</Link>
       </form>
     </FiltersToggle>
+  );
+}
+
+/** Campo de busca por texto no topo de uma lista (GET, parâmetro `q`). Esconde quando `hidden` (ex.: durante a edição). */
+export function SearchBar({
+  action, q, placeholder = "Buscar pelo nome…", hidden,
+}: { action: string; q: string; placeholder?: string; hidden?: boolean }) {
+  if (hidden) return null;
+  return (
+    <form action={action} method="get" role="search" className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="relative min-w-60 max-w-md flex-1">
+        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+        <input
+          type="search" name="q" defaultValue={q} placeholder={placeholder} aria-label={placeholder}
+          autoComplete="off" className="input pl-9"
+        />
+      </div>
+      <button type="submit" className="btn btn-primary">Buscar</button>
+      {q && <Link href={action} className="btn btn-ghost">Limpar</Link>}
+    </form>
   );
 }
 

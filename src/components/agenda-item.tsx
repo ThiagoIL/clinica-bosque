@@ -1,10 +1,13 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { X } from "lucide-react";
+import { Loader2, Pencil, Trash2, X } from "lucide-react";
 import type { AppointmentStatus, CancelParty } from "@/generated/prisma/enums";
 import { appointmentStatusLabel } from "@/lib/labels";
+import { formatDate, localParts, weekdayShort } from "@/lib/dates";
+import { moveAppointment } from "@/app/(app)/agenda/actions";
+import { deleteEngagement } from "@/app/(app)/lancamentos/actions";
 import { DEFAULT_TEMPLATE_BODY, isTouchPhone, renderTemplate, whatsappLink, type MessageVars } from "@/lib/whatsapp";
 import { useWhatsappTemplates } from "@/components/whatsapp-templates";
 import { AbaBadge } from "@/components/aba-badge";
@@ -24,7 +27,14 @@ export type AgendaItemInfo = {
   status: AppointmentStatus;
   canceledBy: CancelParty | null;
   startsAt: Date;
-  engagement: { id: string; number: number } | null;
+  endsAt: Date;
+  engagement: { id: string; number: number; canceled: boolean } | null;
+  /** Pode editar/excluir o lançamento deste atendimento (lápis e lixeira do card). */
+  canEditEngagement: boolean;
+  /** Pode arrastar/esticar: atendimento em aberto e usuário com permissão de alterar a agenda. */
+  canMove: boolean;
+  /** Tem atendimentos repetidos depois deste no mesmo lançamento (pergunta se a mudança vale para os próximos). */
+  hasFollowing: boolean;
   hasEvolution: boolean;
   /** Atendimento de lançamento de paciente ABA (mostra o cérebro). */
   aba: boolean;
@@ -107,12 +117,81 @@ function WhatsappSend({ whatsapp, phone }: { whatsapp: AgendaItemInfo["whatsapp"
 
 const WIDTH = 352; // 22rem
 
+const SNAP = 15; // o arrastar encaixa de 15 em 15 minutos
+
+type DragState = {
+  mode: "move" | "resize";
+  startX: number;
+  startY: number;
+  /** Topo e altura do atendimento (px) em relação à coluna do dia, e a esquerda da coluna, quando o arrastar começou. */
+  top: number;
+  height: number;
+  colLeft: number;
+  moved: boolean;
+  pointerId: number;
+};
+/** Onde o atendimento ficaria se soltasse agora: deslocamento visual e o dia/horário/duração resultantes. */
+type Preview = { dx: number; dy: number; height: number | null; date: string; start: number; duration: number; x: number; y: number };
+type Proposal = { date: string; time: string; duration: number };
+
+const minutesToTime = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+
+function durationLabel(minutes: number) {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return h ? (m ? `${h}h${String(m).padStart(2, "0")}` : `${h}h`) : `${m} min`;
+}
+
+const dayLabel = (date: string) => `${weekdayShort(date)} ${formatDate(date).slice(0, 5)}`;
+
+function describeSlot(date: string, startMinutes: number, duration: number) {
+  return `${dayLabel(date)} · ${minutesToTime(startMinutes)}–${minutesToTime(startMinutes + duration)} (${durationLabel(duration)})`;
+}
+
+function describeChange(origin: { date: string; time: string; duration: number }, p: Proposal) {
+  const parts: string[] = [];
+  if (p.date !== origin.date || p.time !== origin.time) parts.push(`Novo horário: ${dayLabel(p.date)}, ${p.time}`);
+  if (p.duration !== origin.duration) parts.push(`Nova duração: ${durationLabel(p.duration)}`);
+  return parts.join(" · ");
+}
+
+/** Lixeira do card: exclui o lançamento inteiro (todos os atendimentos e cobranças), depois de confirmar. */
+function EngagementDelete({ engagement, patientName }: { engagement: { id: string; number: number }; patientName: string }) {
+  const [pending, startTransition] = useTransition();
+
+  function onClick() {
+    const ok = window.confirm(
+      `Excluir o lançamento #${engagement.number} de ${patientName}?\n\nTodos os atendimentos e as cobranças dele serão removidos e não dá para desfazer. Para manter o histórico, use “Cancelar lançamento” na tela do lançamento.`,
+    );
+    if (!ok) return;
+    const data = new FormData();
+    data.set("id", engagement.id);
+    startTransition(async () => {
+      const result = await deleteEngagement({}, data);
+      if (result?.error) window.alert(result.error);
+    });
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={pending}
+      title="Excluir o lançamento"
+      aria-label="Excluir o lançamento"
+      className="rounded p-1.5 text-muted hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+    >
+      {pending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+    </button>
+  );
+}
+
 /**
  * Atendimento na agenda: ao clicar no nome do paciente abre uma janela no centro da tela, com a situação
  * (confirmar, presente, ausente, cancelou), reagendamento e atalhos para o atendimento e o paciente.
  */
 export function AgendaItem({
-  info, className, style, title, defaultOpen, children,
+  info, className, style, title, defaultOpen, drag, children,
 }: {
   info: AgendaItemInfo;
   className?: string;
@@ -120,6 +199,8 @@ export function AgendaItem({
   title?: string;
   /** Abre sozinho (link vindo do painel inicial). */
   defaultOpen?: boolean;
+  /** Medidas da grade de horários: liga o arrastar e esticar (só nas visões de dia e semana). */
+  drag?: { startHour: number; endHour: number; hourHeight: number };
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -142,19 +223,233 @@ export function AgendaItem({
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
+  // ── arrastar (mudar de dia/horário) e esticar (mudar a duração), como no Google Agenda ──
+  const origin = useMemo(() => {
+    const parts = localParts(info.startsAt);
+    return {
+      date: parts.date,
+      time: parts.time,
+      minutes: Number(parts.time.slice(0, 2)) * 60 + Number(parts.time.slice(3)),
+      duration: Math.round((info.endsAt.getTime() - info.startsAt.getTime()) / 60_000),
+    };
+  }, [info.startsAt, info.endsAt]);
+
+  const dragRef = useRef<DragState | null>(null);
+  const latest = useRef<Preview | null>(null);
+  const suppressClick = useRef(false);
+  const [preview, setPreview] = useState<Preview | null>(null);
+  const [ask, setAsk] = useState<Proposal | null>(null); // mudança aguardando "só este" ou "este e os próximos"
+  const [moving, startMove] = useTransition();
+
+  // o servidor devolveu o atendimento já no novo lugar: some a prévia
+  useEffect(() => {
+    latest.current = null;
+    setPreview(null);
+  }, [info.startsAt.getTime(), info.endsAt.getTime()]);
+
+  function compute(clientX: number, clientY: number, d: DragState): Preview | null {
+    if (!drag) return null;
+    const hh = drag.hourHeight;
+    const gridMinutes = (drag.endHour - drag.startHour) * 60;
+    const startOffset = origin.minutes - drag.startHour * 60; // minutos desde o topo da grade
+    if (d.mode === "resize") {
+      const bottomPx = d.top + d.height + (clientY - d.startY);
+      let duration = Math.round((((bottomPx - d.top) / hh) * 60) / SNAP) * SNAP;
+      duration = Math.max(SNAP, Math.min(duration, gridMinutes - startOffset));
+      return { dx: 0, dy: 0, height: Math.max((duration / 60) * hh, 14), date: origin.date, start: startOffset, duration, x: clientX, y: clientY };
+    }
+    const columns = Array.from(document.querySelectorAll<HTMLElement>("[data-agenda-day]"));
+    const distance = (c: HTMLElement) => {
+      const r = c.getBoundingClientRect();
+      return clientX < r.left ? r.left - clientX : clientX > r.right ? clientX - r.right : 0;
+    };
+    const target = columns.reduce<HTMLElement | null>((best, c) => (!best || distance(c) < distance(best) ? c : best), null);
+    if (!target) return null;
+    const topPx = d.top + (clientY - d.startY);
+    let start = Math.round(((topPx / hh) * 60) / SNAP) * SNAP;
+    start = Math.max(0, Math.min(start, gridMinutes - origin.duration));
+    return {
+      dx: target.getBoundingClientRect().left - d.colLeft,
+      dy: (start / 60) * hh - d.top,
+      height: null,
+      date: target.dataset.agendaDay ?? origin.date,
+      start,
+      duration: origin.duration,
+      x: clientX,
+      y: clientY,
+    };
+  }
+
+  function onPointerDown(e: React.PointerEvent<HTMLButtonElement>) {
+    if (!drag || !info.canMove || moving || e.button !== 0 || e.pointerType !== "mouse") return;
+    const el = e.currentTarget;
+    const column = el.parentElement;
+    if (!column?.dataset.agendaDay) return;
+    const rect = el.getBoundingClientRect();
+    const colRect = column.getBoundingClientRect();
+    dragRef.current = {
+      mode: e.clientY > rect.bottom - 8 && rect.height >= 24 ? "resize" : "move",
+      startX: e.clientX, startY: e.clientY, top: rect.top - colRect.top, height: rect.height, colLeft: colRect.left,
+      moved: false, pointerId: e.pointerId,
+    };
+    try {
+      el.setPointerCapture(e.pointerId); // continua recebendo o movimento mesmo fora do bloco
+    } catch {
+      // sem captura o arrastar ainda funciona enquanto o mouse estiver sobre o bloco
+    }
+  }
+
+  function onPointerMove(e: React.PointerEvent<HTMLButtonElement>) {
+    const d = dragRef.current;
+    if (!d) {
+      // sem arrastar: o cursor avisa que a borda de baixo estica
+      if (drag && info.canMove && e.pointerType === "mouse") {
+        const rect = e.currentTarget.getBoundingClientRect();
+        e.currentTarget.style.cursor = e.clientY > rect.bottom - 8 && rect.height >= 24 ? "ns-resize" : "grab";
+      }
+      return;
+    }
+    if (e.pointerId !== d.pointerId) return;
+    if (!d.moved && Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < 5) return;
+    d.moved = true;
+    const next = compute(e.clientX, e.clientY, d);
+    latest.current = next;
+    setPreview(next);
+  }
+
+  function finishDrag(e: React.PointerEvent<HTMLButtonElement>, cancel: boolean) {
+    const d = dragRef.current;
+    if (!d || e.pointerId !== d.pointerId) return;
+    dragRef.current = null;
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+    if (!d.moved) return; // foi só um clique: abre o card
+    suppressClick.current = true; // o "click" que o navegador dispara ao soltar não deve abrir o card
+    setTimeout(() => (suppressClick.current = false), 0); // e, se ele não vier, a trava não fica presa
+    const p = latest.current;
+    if (cancel || !p || !drag) {
+      latest.current = null;
+      setPreview(null);
+      return;
+    }
+    const proposal: Proposal = { date: p.date, time: minutesToTime(drag.startHour * 60 + p.start), duration: p.duration };
+    if (proposal.date === origin.date && proposal.time === origin.time && proposal.duration === origin.duration) {
+      latest.current = null;
+      setPreview(null); // voltou ao mesmo lugar
+    } else if (info.hasFollowing) {
+      setAsk(proposal);
+    } else {
+      apply(proposal, "one");
+    }
+  }
+
+  function apply(proposal: Proposal, scope: "one" | "series") {
+    setAsk(null);
+    const data = new FormData();
+    data.set("id", info.id);
+    data.set("date", proposal.date);
+    data.set("time", proposal.time);
+    data.set("duration", String(proposal.duration));
+    data.set("scope", scope);
+    startMove(async () => {
+      const result = await moveAppointment({}, data);
+      if (result?.error) {
+        window.alert(result.error);
+        latest.current = null;
+        setPreview(null); // volta ao lugar de antes
+      }
+    });
+  }
+
+  function cancelAsk() {
+    setAsk(null);
+    latest.current = null;
+    setPreview(null);
+  }
+
+  useEffect(() => {
+    if (!ask) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && cancelAsk();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [ask]);
+
+  const dragging = dragRef.current?.moved === true;
+  const itemStyle: CSSProperties | undefined = preview
+    ? {
+        ...style,
+        transform: `translate(${preview.dx}px, ${preview.dy}px)`,
+        ...(preview.height ? { height: preview.height } : {}),
+        zIndex: 40,
+        transition: "none",
+        opacity: moving ? 0.7 : 0.92,
+        boxShadow: "0 8px 24px rgba(0,0,0,0.22)",
+        cursor: moving ? "progress" : "grabbing",
+        userSelect: "none",
+      }
+    : style;
+  const previewBadge = preview && dragging && drag ? describeSlot(preview.date, drag.startHour * 60 + preview.start, preview.duration) : null;
+
   return (
     <>
       <button
         type="button"
-        onClick={() => (open ? setOpen(false) : show())}
+        onClick={() => {
+          if (suppressClick.current) {
+            suppressClick.current = false; // o clique que termina um arrastar não abre o card
+            return;
+          }
+          if (open) setOpen(false);
+          else show();
+        }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={(e) => finishDrag(e, false)}
+        onPointerCancel={(e) => finishDrag(e, true)}
         aria-haspopup="dialog"
         aria-expanded={open}
         className={className}
-        style={style}
+        style={itemStyle}
         title={title}
       >
         {children}
       </button>
+
+      {previewBadge &&
+        preview &&
+        createPortal(
+          <div
+            className="pointer-events-none fixed z-[70] rounded-md bg-ink px-2 py-1 text-xs font-medium text-white shadow-lg"
+            style={{ left: preview.x + 14, top: preview.y + 14 }}
+          >
+            {previewBadge}
+          </div>,
+          document.body,
+        )}
+
+      {ask &&
+        createPortal(
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/30" onClick={cancelAsk} aria-hidden />
+            <div role="alertdialog" aria-modal="true" aria-label="Aplicar a mudança" className="relative w-full max-w-sm rounded-xl border border-line bg-surface p-5 shadow-xl">
+              <p className="text-sm font-semibold">Aplicar a mudança em quais atendimentos?</p>
+              <p className="mt-1 text-sm text-muted">{info.patientName} tem atendimentos repetidos neste lançamento.</p>
+              <p className="mt-2 rounded-lg bg-canvas px-3 py-2 text-sm">{describeChange(origin, ask)}</p>
+              <div className="mt-4 flex flex-col gap-2">
+                <button type="button" className="btn btn-primary justify-center" onClick={() => apply(ask, "one")}>
+                  Apenas este atendimento
+                </button>
+                <button type="button" className="btn btn-outline justify-center" onClick={() => apply(ask, "series")}>
+                  Este e os próximos atendimentos
+                </button>
+                <button type="button" className="btn btn-ghost justify-center" onClick={cancelAsk}>
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
+
       {open &&
         createPortal(
           // modal centralizado na tela: o fundo escurece e, se a tela for baixa, o card rola por dentro
@@ -173,14 +468,30 @@ export function AgendaItem({
                   <p className="text-xs text-muted">{info.when}</p>
                   <p className="text-xs text-muted">{info.serviceName} · {info.professionalName}</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  aria-label="Fechar"
-                  className="-mr-1 -mt-1 rounded p-1 text-muted hover:bg-black/5 hover:text-ink"
-                >
-                  <X className="size-4" />
-                </button>
+                <div className="-mr-1 -mt-1 flex shrink-0 items-center">
+                  {info.engagement && info.canEditEngagement && (
+                    <>
+                      {!info.engagement.canceled && (
+                        <Link
+                          href={`/lancamentos/${info.engagement.id}/editar`}
+                          title="Editar o lançamento" aria-label="Editar o lançamento"
+                          className="rounded p-1.5 text-muted hover:bg-black/5 hover:text-ink"
+                        >
+                          <Pencil className="size-4" />
+                        </Link>
+                      )}
+                      <EngagementDelete engagement={info.engagement} patientName={info.patientName} />
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    aria-label="Fechar"
+                    className="rounded p-1.5 text-muted hover:bg-black/5 hover:text-ink"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
               </div>
 
               <div className="mt-2 flex flex-wrap items-center gap-1.5">

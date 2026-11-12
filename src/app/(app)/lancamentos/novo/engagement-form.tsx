@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import clsx from "clsx";
-import { ActionForm, CheckboxField, FormActions, FormGrid, SelectField, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
+import {
+  ActionForm, CheckboxField, FormActions, FormGrid, SearchSelectField, SelectField, SubmitButton, TextField, TextareaField,
+} from "@/components/ui/form-kit";
 import { LinkButton } from "@/components/ui/primitives";
 import {
   MAX_OCCURRENCES, endOfMonth, formatDate, occurrenceDates, weekdayName, type RecurrenceKind,
@@ -109,12 +111,12 @@ export function EngagementForm({ patients, professionals, services, plans, defau
       <div className="card p-5">
         <h2 className="mb-4 text-sm">Atendimento</h2>
         <FormGrid>
-          <SelectField
+          <SearchSelectField
             name="patientId" label="Paciente" required value={patientId} onChange={onPatientChange}
             options={patients.map((p) => ({ value: p.id, label: p.name }))}
-            hint={patient ? `Plano de saúde: ${plan?.name ?? "Particular"}` : undefined}
+            hint={patient ? `Plano de saúde: ${plan?.name ?? "Particular"}` : "Digite parte do nome para buscar"}
           />
-          <SelectField
+          <SearchSelectField
             name="professionalId" label="Profissional" required defaultValue={defaults.professionalId}
             options={professionals.map((p) => ({ value: p.id, label: p.specialty ? `${p.name} — ${p.specialty}` : p.name }))}
           />
@@ -122,7 +124,7 @@ export function EngagementForm({ patients, professionals, services, plans, defau
             name="kind" label="Tipo do atendimento" required allowEmpty={false}
             options={optionsOf(attendanceKindLabels)} value={kind} onChange={setKind}
           />
-          <SelectField
+          <SearchSelectField
             name="serviceId" label="Serviço" required value={serviceId} onChange={onServiceChange} span={2}
             options={services.map((s) => ({ value: s.id, label: s.name }))}
           />

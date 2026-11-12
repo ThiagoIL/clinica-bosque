@@ -7,6 +7,7 @@ import {
   ActionForm, CheckboxField, FormActions, FormGrid, PriceInput, SelectField, SubmitButton, TextField,
 } from "@/components/ui/form-kit";
 import { Badge, Card, EmptyState, LinkButton, PageHeader, param } from "@/components/ui/primitives";
+import { TableFilter } from "@/components/table-filter";
 import { copyPriceTable, savePriceTable } from "./actions";
 
 export const metadata = { title: "Tabela de preços" };
@@ -55,9 +56,11 @@ export default async function PriceTablePage({
         ))}
       </div>
 
+      <TableFilter target="price-tables" placeholder="Buscar serviço ou produto…" />
+
       <ActionForm key={`${plan.id}-${version}`} action={savePriceTable}>
         <input type="hidden" name="planId" value={plan.id} />
-        <div className="space-y-6">
+        <div id="price-tables" className="space-y-6">
           <Card title={`Serviços — ${plan.name}`} padded={false}>
             {services.length === 0 ? (
               <div className="p-5">
@@ -68,7 +71,7 @@ export default async function PriceTablePage({
                 <thead><tr><th>Serviço</th><th className="text-right">Preço (R$)</th></tr></thead>
                 <tbody>
                   {services.map((s) => (
-                    <tr key={s.id}>
+                    <tr key={s.id} data-filter-row={s.name}>
                       <td className="font-medium">{s.name}</td>
                       <td className="text-right">
                         <PriceInput name={`s_${s.id}`} defaultValue={sPrice.has(s.id) ? centsToInput(sPrice.get(s.id)) : ""} />
@@ -89,7 +92,7 @@ export default async function PriceTablePage({
                 <thead><tr><th>Produto</th><th>Unidade</th><th className="text-right">Preço (R$)</th></tr></thead>
                 <tbody>
                   {products.map((p) => (
-                    <tr key={p.id}>
+                    <tr key={p.id} data-filter-row={p.name}>
                       <td className="font-medium">{p.name}</td>
                       <td>{p.unit}</td>
                       <td className="text-right">

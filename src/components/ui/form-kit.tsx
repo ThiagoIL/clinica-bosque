@@ -7,6 +7,7 @@ import {
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import clsx from "clsx";
 import type { FormState } from "@/lib/form";
+import { SearchSelect } from "@/components/search-select";
 
 const FormCtx = createContext<{ state: FormState; pending: boolean; readOnly: boolean }>({ state: {}, pending: false, readOnly: false });
 
@@ -355,6 +356,30 @@ export function SelectField({
           </option>
         ))}
       </select>
+    </FieldShell>
+  );
+}
+
+/** Campo de escolha com pesquisa (digita-se parte do nome): para listas grandes, como pacientes. Mesmo uso do SelectField. */
+export function SearchSelectField({
+  name, label, required, hint, span, disabled, options, defaultValue, value, onChange, placeholder, allowEmpty = true,
+}: BaseProps & {
+  options: Option[];
+  defaultValue?: string | null;
+  /** Modo controlado (opcional). */
+  value?: string;
+  onChange?: (value: string) => void;
+  placeholder?: string;
+  allowEmpty?: boolean;
+}) {
+  const error = useFieldError(name);
+  const ro = useReadOnly();
+  return (
+    <FieldShell label={label} name={name} error={error} hint={hint} required={required} span={span}>
+      <SearchSelect
+        name={name} options={options} defaultValue={defaultValue} value={value} onChange={onChange}
+        placeholder={placeholder} allowEmpty={allowEmpty} disabled={disabled || ro} invalid={!!error}
+      />
     </FieldShell>
   );
 }

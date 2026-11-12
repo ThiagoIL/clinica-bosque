@@ -4,7 +4,7 @@ import { requireAdmin } from "@/lib/auth";
 import { formatDateTime } from "@/lib/dates";
 import { optionsOf, userRoleLabels } from "@/lib/labels";
 import { ActionForm, CheckboxField, DeleteButton, FormActions, FormGrid, SelectField, SubmitButton, TextField } from "@/components/ui/form-kit";
-import { Badge, Card, LinkButton, PageHeader, param } from "@/components/ui/primitives";
+import { Badge, Card, LinkButton, PageHeader, SearchBar, param } from "@/components/ui/primitives";
 import { deleteUser, saveUser } from "./actions";
 
 export const metadata = { title: "Usuários" };
@@ -17,9 +17,11 @@ export default async function UsersPage({
   const me = await requireAdmin();
   const sp = await searchParams;
   const editId = param(sp.edit);
+  const q = param(sp.q)?.trim() ?? "";
 
   const [users, profiles, editing] = await Promise.all([
     db.user.findMany({
+      where: q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { email: { contains: q, mode: "insensitive" } }] } : undefined,
       orderBy: [{ active: "desc" }, { name: "asc" }],
       include: { accessProfile: { select: { name: true } }, professional: { select: { name: true } } },
     }),
@@ -50,6 +52,8 @@ export default async function UsersPage({
           )
         }
       />
+
+      <SearchBar action="/usuarios" q={q} placeholder="Buscar por nome ou e-mail…" hidden={editId !== undefined} />
 
       {editId !== undefined && (
         <Card title={editing ? `Editar ${editing.name}` : "Novo usuário"} className="mb-6">

@@ -10,6 +10,7 @@ import { requireUser } from "@/lib/auth";
 import { ownProfessionalId } from "@/lib/scope";
 import { Badge, EmptyState, FilterBar, FilterField, LinkButton, PageHeader, Pagination, param } from "@/components/ui/primitives";
 import { AbaBadge } from "@/components/aba-badge";
+import { SearchSelect } from "@/components/search-select";
 
 export const metadata = { title: "Lançamentos" };
 const PAGE_SIZE = 20;
@@ -111,10 +112,10 @@ export default async function EngagementsPage({
         {!own && (
           <>
             <FilterField label="Especialidade" className="min-w-44">
-              <select name="specialtyId" defaultValue={specialtyId} className="input">
-                <option value="">Todas</option>
-                {specialties.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+              <SearchSelect
+                name="specialtyId" defaultValue={specialtyId} emptyLabel="Todas"
+                options={specialties.map((s) => ({ value: s.id, label: s.name }))}
+              />
             </FilterField>
             <FilterField label="Profissional" className="min-w-52">
               <input name="professional" defaultValue={professionalQ} list="f-professionals" placeholder="Digite para buscar…" autoComplete="off" className="input" />

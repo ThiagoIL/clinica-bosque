@@ -2,7 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatMoney, centsToInput } from "@/lib/money";
 import { ActionForm, CheckboxField, DeleteButton, FormActions, FormGrid, SubmitButton, TextField } from "@/components/ui/form-kit";
-import { Badge, Card, EmptyState, LinkButton, PageHeader, param } from "@/components/ui/primitives";
+import { Badge, Card, EmptyState, LinkButton, PageHeader, SearchBar, param } from "@/components/ui/primitives";
 import { deleteService, saveService } from "./actions";
 
 export const metadata = { title: "Serviços" };
@@ -14,9 +14,11 @@ export default async function ServicesPage({
 }) {
   const sp = await searchParams;
   const editId = param(sp.edit);
+  const q = param(sp.q)?.trim() ?? "";
   const particular = await db.healthPlan.findFirst({ where: { isDefault: true } });
   const [services, editing] = await Promise.all([
     db.service.findMany({
+      where: q ? { name: { contains: q, mode: "insensitive" } } : undefined,
       orderBy: [{ active: "desc" }, { name: "asc" }],
       include: { prices: { where: { healthPlanId: particular?.id ?? "" } }, _count: { select: { prices: true } } },
     }),
@@ -39,6 +41,8 @@ export default async function ServicesPage({
           )
         }
       />
+
+      <SearchBar action="/servicos" q={q} placeholder="Buscar serviço…" hidden={editId !== undefined} />
 
       {editId !== undefined && (
         <Card title={editing ? `Editar ${editing.name}` : "Novo serviço"} className="mb-6">

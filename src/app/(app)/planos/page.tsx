@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { ActionForm, CheckboxField, FormActions, FormGrid, SubmitButton, TextField, TextareaField } from "@/components/ui/form-kit";
-import { Badge, Card, LinkButton, PageHeader, param } from "@/components/ui/primitives";
+import { Badge, Card, LinkButton, PageHeader, SearchBar, param } from "@/components/ui/primitives";
 import { saveHealthPlan } from "./actions";
 
 export const metadata = { title: "Planos de saúde" };
@@ -13,9 +13,11 @@ export default async function HealthPlansPage({
 }) {
   const sp = await searchParams;
   const editId = param(sp.edit);
+  const q = param(sp.q)?.trim() ?? "";
 
   const [plans, editing] = await Promise.all([
     db.healthPlan.findMany({
+      where: q ? { name: { contains: q, mode: "insensitive" } } : undefined,
       orderBy: [{ isDefault: "desc" }, { active: "desc" }, { name: "asc" }],
       include: { _count: { select: { patients: true, servicePrices: true } } },
     }),
@@ -29,6 +31,8 @@ export default async function HealthPlansPage({
         description="Convênios atendidos pela clínica. Cada plano tem a sua própria tabela de preços; “Particular” é o plano padrão."
         actions={editId === undefined && <LinkButton href="/planos?edit=new">Novo plano</LinkButton>}
       />
+
+      <SearchBar action="/planos" q={q} placeholder="Buscar plano de saúde…" hidden={editId !== undefined} />
 
       {editId !== undefined && (
         <Card title={editing ? `Editar ${editing.name}` : "Novo plano de saúde"} className="mb-6">

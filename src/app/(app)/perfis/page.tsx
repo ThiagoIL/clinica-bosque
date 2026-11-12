@@ -5,7 +5,7 @@ import { MODULES, LEVEL_LABELS, parseEnabledModules, parsePermissions } from "@/
 import {
   ActionForm, ConfirmSubmit, FormActions, FormGrid, SelectField, SubmitButton, TextField,
 } from "@/components/ui/form-kit";
-import { Badge, Card, EmptyState, LinkButton, PageHeader, param } from "@/components/ui/primitives";
+import { Badge, Card, EmptyState, LinkButton, PageHeader, SearchBar, param } from "@/components/ui/primitives";
 import { deleteAccessProfile, saveAccessProfile } from "./actions";
 
 export const metadata = { title: "Perfis de acesso" };
@@ -18,10 +18,13 @@ export default async function AccessProfilesPage({
   await requireAdmin();
   const sp = await searchParams;
   const editId = param(sp.edit);
+  const q = param(sp.q)?.trim() ?? "";
 
   const [settings, profiles, editing] = await Promise.all([
     db.systemSettings.findUnique({ where: { id: "singleton" } }),
-    db.accessProfile.findMany({ orderBy: { name: "asc" }, include: { _count: { select: { users: true } } } }),
+    db.accessProfile.findMany({
+      where: q ? { name: { contains: q, mode: "insensitive" } } : undefined,
+      orderBy: { name: "asc" }, include: { _count: { select: { users: true } } } }),
     editId && editId !== "new" ? db.accessProfile.findUnique({ where: { id: editId } }) : null,
   ]);
   const enabled = settings ? parseEnabledModules(settings.enabledModules) : [];
@@ -36,6 +39,8 @@ export default async function AccessProfilesPage({
         back={{ href: "/usuarios", label: "Usuários" }}
         actions={editId === undefined && <LinkButton href="/perfis?edit=new">Novo perfil</LinkButton>}
       />
+
+      <SearchBar action="/perfis" q={q} placeholder="Buscar perfil de acesso…" hidden={editId !== undefined} />
 
       {editId !== undefined && (
         <Card title={editing ? `Editar ${editing.name}` : "Novo perfil"} className="mb-6">
